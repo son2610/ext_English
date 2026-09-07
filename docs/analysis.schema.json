@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "meaningVi": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "contextNoteVi": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8000
+    },
+    "knowledge": {
+      "minItems": 1,
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Stable English canonical identifier; include grammar formula or phrase sense, not source wording"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "grammar",
+              "phrase"
+            ]
+          },
+          "group": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Tên nhóm ngữ pháp bằng tiếng Việt; cụm từ dùng nhóm Cụm từ"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Tên tiếng Việt"
+          },
+          "form": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Công thức ngữ pháp hoặc cụm từ tiếng Anh"
+          },
+          "meaningVi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000
+          },
+          "explanationVi": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Exact continuous quote present in selected text or context"
+          },
+          "examples": {
+            "minItems": 2,
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "en": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8000
+                },
+                "vi": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 8000
+                }
+              },
+              "required": [
+                "en",
+                "vi"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "production": {
+            "type": "object",
+            "properties": {
+              "instructionVi": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8000
+              },
+              "answerEn": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8000
+              }
+            },
+            "required": [
+              "instructionVi",
+              "answerEn"
+            ],
+            "additionalProperties": false
+          },
+          "cloze": {
+            "type": "object",
+            "properties": {
+              "sentence": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8000
+              },
+              "answer": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "hintVi": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "sentence",
+              "answer",
+              "hintVi"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "group",
+          "name",
+          "form",
+          "meaningVi",
+          "explanationVi",
+          "evidence",
+          "examples",
+          "production",
+          "cloze"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "meaningVi",
+    "contextNoteVi",
+    "knowledge"
+  ],
+  "additionalProperties": false
+}

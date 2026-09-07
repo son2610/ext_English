@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Mạch Đọc — Học từ ngữ cảnh",
+  "description": "Lưu điều chưa hiểu khi đọc tiếng Anh, luyện viết và ôn đúng hạn. Dữ liệu nằm trên máy bạn.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage", "alarms", "activeTab", "unlimitedStorage", "offscreen", "downloads"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_title": "Mạch Đọc — Mở góc học"},
+  "options_page": "app.html#settings",
+  "chrome_url_overrides": {"newtab": "app.html"},
+  "content_scripts": [{
+    "matches": ["http://*/*", "https://*/*"], "js": ["content.js"],
+    "run_at": "document_idle", "all_frames": true,
+    "match_about_blank": true, "match_origin_as_fallback": true
+  }],
+  "commands": {
+    "capture": {"suggested_key": {"default": "Alt+Shift+S"}, "description": "Lưu nhanh vùng chọn, phân tích sau"},
+    "review": {"suggested_key": {"default": "Alt+Shift+R"}, "description": "Mở phần ôn tập"}
+  },
+  "content_security_policy": {"extension_pages": "script-src 'self'; object-src 'none'; connect-src https://generativelanguage.googleapis.com; base-uri 'none'"}
+}

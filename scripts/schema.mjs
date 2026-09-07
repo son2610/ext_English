@@ -1,0 +1,11 @@
+import { build } from 'esbuild';
+import { writeFile } from 'node:fs/promises';
+const result = await build({ entryPoints: ['src/domain/models.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
+const models = await import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);
+const { z } = await import('zod');
+await writeFile('docs/analysis.schema.json', JSON.stringify(z.toJSONSchema(models.AnalysisSchema), null, 2));
+await writeFile('docs/grade.schema.json', JSON.stringify(z.toJSONSchema(models.GradeSchema), null, 2));
+const fixture = await build({ entryPoints: ['tests/fixtures.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
+const { analysis } = await import(`data:text/javascript;base64,${Buffer.from(fixture.outputFiles[0].text).toString('base64')}`);
+await writeFile('docs/analysis.example.json', JSON.stringify(analysis, null, 2));
+console.log('Đã cập nhật JSON Schema và ví dụ.');

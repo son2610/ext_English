@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.test-profile/
+test-results/
+.npm-cache/
+*.log
+.env*

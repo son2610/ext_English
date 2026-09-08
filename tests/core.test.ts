@@ -131,7 +131,7 @@ describe('data ownership', () => {
   });
   it('rejects malformed, duplicate and dangling imports before writing', async () => {
     await analyzed(); const backup = await exportData();
-    const malformed = { ...backup, version: 2 };
+    const malformed = { ...backup, version: 3 };
     expect(() => parseBackup(JSON.stringify(malformed))).toThrow();
     expect(() => parseBackup(JSON.stringify({ ...backup, captures: [] }))).toThrow('liên kết');
     expect(() => parseBackup(JSON.stringify({ ...backup, units: [...backup.units, backup.units[0]] }))).toThrow('lặp');

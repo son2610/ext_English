@@ -3,10 +3,10 @@ import { send } from '../shared/client';
 
 type HighlightSet = { add(range: Range): void; delete(range: Range): void; clear(): void };
 type HighlightWindow = Window & { Highlight: new () => HighlightSet };
-export function startHighlights(patterns: Pattern[]): () => void {
+export function startHighlights(patterns: Pattern[], prepared?: AhoCorasick): () => void {
   const registry = (CSS as unknown as { highlights?: Map<string, HighlightSet> }).highlights;
   if (!registry || !('Highlight' in window) || !patterns.length) return () => undefined;
-  const matcher = new AhoCorasick(patterns);
+  const matcher = prepared ?? new AhoCorasick(patterns);
   const highlights = new (window as HighlightWindow).Highlight();
   registry.set('mach-doc-known', highlights);
   const style = document.createElement('style');
@@ -24,6 +24,10 @@ export function startHighlights(patterns: Pattern[]): () => void {
   const records = new Map<Text, { range: Range; match: Match }[]>();
   const elements = new Map<Element, Set<Text>>();
   const visible = new Set<Element>();
+  const toMatch = new Set<Element>();
+  let matching: Generator<void> | undefined;
+  const intersections: IntersectionObserverEntry[][] = [];
+  let intersectionEntries: IntersectionObserverEntry[] | undefined; let intersectionIndex = 0;
   const encounters = new Set<string>(); const sent = new Set<string>();
   function clearElement(element: Element) {
     for (const node of elements.get(element) ?? []) {
@@ -40,14 +44,22 @@ export function startHighlights(patterns: Pattern[]): () => void {
     if (encounters.size) timer = window.setTimeout(flushEncounters, 2000);
   }
   const intersection = new IntersectionObserver(entries => {
-    for (const entry of entries) {
-      if (!entry.target.isConnected) { clearElement(entry.target); visible.delete(entry.target); intersection.unobserve(entry.target); continue; }
+    if (intersections.length < 100) intersections.push(entries);
+    schedule();
+  }, { threshold: 0.1 });
+  function applyIntersection(entry: IntersectionObserverEntry) {
+      if (!entry.target.isConnected) { clearElement(entry.target); visible.delete(entry.target); intersection.unobserve(entry.target); return; }
       if (entry.isIntersecting) visible.add(entry.target); else visible.delete(entry.target);
       clearElement(entry.target);
-      if (!entry.isIntersecting || stopped || rangeCount >= 500 || document.hidden) continue;
-      if (entry.target.closest('script,style,pre,code,input,textarea,select,[contenteditable],[role="textbox"],[hidden]')) continue;
+      if (!entry.isIntersecting || stopped || rangeCount >= 500 || document.hidden) return;
+      if (toMatch.size < 1000) toMatch.add(entry.target);
+  }
+  function *matchElement(element: Element): Generator<void> {
+      if (element.closest('script,style,pre,code,input,textarea,select,[contenteditable],[role="textbox"],[hidden]')) return;
       const nodeSet = new Set<Text>();
-      for (const node of entry.target.childNodes) {
+      let inspected = 0;
+      for (const node of element.childNodes) {
+        if (++inspected > 200 || !element.isConnected || !visible.has(element) || document.hidden || rangeCount >= 500) break;
         if (node.nodeType !== Node.TEXT_NODE || !node.textContent || node.textContent.length > 4096) continue;
         const textNode = node as Text;
         const matches = matcher.search(textNode.data).slice(0, Math.max(0, 500 - rangeCount));
@@ -58,16 +70,20 @@ export function startHighlights(patterns: Pattern[]): () => void {
           return { range, match };
         });
         if (items.length) { records.set(textNode, items); nodeSet.add(textNode); }
+        if (nodeSet.size) elements.set(element, nodeSet);
+        yield;
       }
-      if (nodeSet.size) elements.set(entry.target, nodeSet);
-    }
     if (encounters.size && !timer) timer = window.setTimeout(flushEncounters, 2000);
-  }, { threshold: 0.1 });
+  }
   let walker: TreeWalker | undefined;
   function schedule() { if (!idle && !stopped) idle = requestIdleCallback(work, { timeout: 1500 }); }
   function work(deadline: IdleDeadline) {
     idle = 0; const start = performance.now();
     while (!stopped && performance.now() - start < 4 && (deadline.timeRemaining() > 1 || deadline.didTimeout)) {
+      if (!intersectionEntries && intersections.length) { intersectionEntries = intersections.shift(); intersectionIndex = 0; }
+      if (intersectionEntries) { const entry = intersectionEntries[intersectionIndex++]; if (entry) applyIntersection(entry); else intersectionEntries = undefined; continue; }
+      if (!matching && toMatch.size) { const element = toMatch.values().next().value!; toMatch.delete(element); matching = matchElement(element); }
+      if (matching) { if (matching.next().done) matching = undefined; continue; }
       if (!walker) {
         const root = pending.values().next().value as Element | undefined;
         if (!root) break;
@@ -81,7 +97,7 @@ export function startHighlights(patterns: Pattern[]): () => void {
       if (node.childNodes.length && !node.closest('[data-mach-doc],script,style,pre,code,input,textarea,select,[contenteditable]')) intersection.observe(node);
     }
     for (const element of elements.keys()) if (!element.isConnected) { clearElement(element); visible.delete(element); intersection.unobserve(element); }
-    if (pending.size || walker) schedule();
+    if (pending.size || walker || matching || toMatch.size || intersectionEntries || intersections.length) schedule();
   }
   function add(root: Element) { if (pending.size < 100 && !root.closest('[data-mach-doc]')) { pending.add(root); schedule(); } }
   add(document.body ?? document.documentElement);

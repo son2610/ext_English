@@ -5,6 +5,9 @@ const models = await import(`data:text/javascript;base64,${Buffer.from(result.ou
 const { z } = await import('zod');
 await writeFile('docs/analysis.schema.json', JSON.stringify(z.toJSONSchema(models.AnalysisSchema), null, 2));
 await writeFile('docs/grade.schema.json', JSON.stringify(z.toJSONSchema(models.GradeSchema), null, 2));
+const extensionBuild = await build({ entryPoints: ['src/domain/enrichment.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
+const extra = await import(`data:text/javascript;base64,${Buffer.from(extensionBuild.outputFiles[0].text).toString('base64')}`);
+await writeFile('docs/enrichment.schema.json', JSON.stringify(Object.fromEntries(['AssessmentSchema', 'UsageSchema', 'PracticeSchema', 'WeeklySchema', 'DictionarySchema', 'OptimizationSchema'].map(name => [name, z.toJSONSchema(extra[name])])), null, 2));
 const fixture = await build({ entryPoints: ['tests/fixtures.ts'], bundle: true, write: false, platform: 'node', format: 'esm' });
 const { analysis } = await import(`data:text/javascript;base64,${Buffer.from(fixture.outputFiles[0].text).toString('base64')}`);
 await writeFile('docs/analysis.example.json', JSON.stringify(analysis, null, 2));

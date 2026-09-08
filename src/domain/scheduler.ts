@@ -3,15 +3,15 @@ import type { Schedule, Unit, ExerciseMode } from './models';
 
 export interface Scheduler {
   initial(now: number): Schedule;
-  review(card: Schedule, rating: 1 | 2 | 3 | 4, now: number, retention: number): Schedule;
+  review(card: Schedule, rating: 1 | 2 | 3 | 4, now: number, retention: number, weights?: number[]): Schedule;
 }
 function serialize(card: Card): Schedule {
   return { ...card, learning_steps: card.learning_steps ?? 0, due: card.due.getTime(), last_review: card.last_review?.getTime() };
 }
 export const scheduler: Scheduler = {
   initial: now => serialize(createEmptyCard(new Date(now))),
-  review: (card, rating, now, retention) => {
-    const engine = fsrs({ request_retention: retention, enable_fuzz: false, maximum_interval: 3650 });
+  review: (card, rating, now, retention, weights) => {
+    const engine = fsrs({ request_retention: retention, enable_fuzz: false, maximum_interval: 3650, ...(weights ? { w: weights } : {}) });
     const converted = { ...card, due: new Date(card.due), last_review: card.last_review ? new Date(card.last_review) : undefined };
     return serialize(engine.next(converted, new Date(now), rating as FsrsGrade).card);
   },
@@ -26,14 +26,19 @@ export function exercise(unit: Unit): { mode: ExerciseMode; prompt: string; answ
   }
   return { mode: 'production', prompt: unit.knowledge.production.instructionVi, answer: unit.knowledge.production.answerEn, hint: unit.knowledge.form };
 }
-export function dueQueue(units: Unit[], now: number, newLimit: number): Unit[] {
-  const due = units.filter(u => !u.suspended && u.schedule.due <= now).sort((a, b) => a.schedule.due - b.schedule.due);
+export function dueQueue(units: Unit[], now: number, newLimit: number, priority: (unit: Unit) => number = () => 0): Unit[] {
+  const due = units.filter(u => !u.suspended && u.schedule.due <= now).sort((a, b) => {
+    if (a.schedule.reps > 0 && b.schedule.reps === 0) return -1;
+    if (b.schedule.reps > 0 && a.schedule.reps === 0) return 1;
+    return a.schedule.reps === 0 ? priority(b) - priority(a) || a.schedule.due - b.schedule.due : a.schedule.due - b.schedule.due;
+  });
   let newCount = 0;
   const pending = due.filter(u => u.schedule.reps > 0 || newCount++ < newLimit);
   const result: Unit[] = [];
   while (pending.length) {
     const last = result.at(-1);
-    let index = pending.findIndex(u => !last || (u.knowledge.group !== last.knowledge.group && !u.captureIds.some(id => last.captureIds.includes(id))));
+    const mature = pending[0]!.schedule.reps > 0;
+    let index = pending.findIndex(u => (u.schedule.reps > 0) === mature && (!last || (u.knowledge.group !== last.knowledge.group && !u.captureIds.some(id => last.captureIds.includes(id)))));
     if (index < 0) index = 0;
     result.push(pending.splice(index, 1)[0]!);
   }

@@ -6,6 +6,21 @@ const word = (character: string | undefined) => !!character && /[\p{L}\p{N}_]/u.
 export class AhoCorasick {
   private nodes: TrieNode[] = [{ next: new Map(), fail: 0, output: [] }];
   constructor(patterns: Pattern[]) {
+    for (const _ of this.build(patterns)) { /* Synchronous entry point for tests and small inputs. */ }
+  }
+  static async prepare(patterns: Pattern[], cancelled: () => boolean): Promise<AhoCorasick | undefined> {
+    const matcher = new AhoCorasick([]); const steps = matcher.build(patterns);
+    return new Promise(resolve => {
+      const chunk = (deadline: IdleDeadline) => {
+        if (cancelled()) { resolve(undefined); return; }
+        const start = performance.now();
+        do { if (steps.next().done) { resolve(matcher); return; } } while (performance.now() - start < 3 && deadline.timeRemaining() > 1);
+        requestIdleCallback(chunk, { timeout: 1500 });
+      };
+      requestIdleCallback(chunk, { timeout: 1500 });
+    });
+  }
+  private *build(patterns: Pattern[]): Generator<void> {
     for (const pattern of patterns) {
       const text = fold(pattern.text.trim());
       if (text.length < 2 || text.length > 100) continue;
@@ -16,6 +31,7 @@ export class AhoCorasick {
         state = next;
       }
       this.nodes[state]!.output.push({ ...pattern, text });
+      yield;
     }
     const queue = [...this.nodes[0]!.next.values()];
     for (let index = 0; index < queue.length; index++) {
@@ -28,6 +44,7 @@ export class AhoCorasick {
         this.nodes[child]!.fail = next;
         this.nodes[child]!.output.push(...this.nodes[next]!.output);
       }
+      yield;
     }
   }
   search(input: string): Match[] {

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { VideoSourceSchema, TranscriptRepairSchema } from './video';
+import { errorCategories } from './error-categories';
 
 const text = z.string().min(1).max(8000);
 const short = z.string().min(1).max(500);
@@ -19,21 +21,23 @@ export const AnalysisSchema = z.object({
   schemaVersion: z.literal(1), meaningVi: text,
   contextNoteVi: text,
   knowledge: z.array(KnowledgeSchema).min(1).max(8),
+  transcript: TranscriptRepairSchema.optional(),
 });
 export type Analysis = z.infer<typeof AnalysisSchema>;
 export type Knowledge = z.infer<typeof KnowledgeSchema>;
 export const GradeSchema = z.object({
   correct: z.boolean(), score: z.number().min(0).max(100),
   feedbackVi: text, correctedEn: text,
-  errors: z.array(z.object({ original: short, correction: short, reasonVi: text })).max(12),
+  errors: z.array(z.object({ original: short, correction: short, reasonVi: text, category: z.enum(errorCategories).optional(), l1NoteVi: z.string().max(3000).optional() })).max(600),
 });
 export type Grade = z.infer<typeof GradeSchema>;
 export const SourceSchema = z.object({
   url: z.string().url().max(8000).refine(v => /^https?:\/\//i.test(v)),
   title: z.string().max(1000), frameUrl: z.string().url().max(8000).refine(v => /^https?:\/\//i.test(v)),
-  exact: text, prefix: z.string().max(250), suffix: z.string().max(250),
+  exact: text, originalExact: text.optional(), prefix: z.string().max(250), suffix: z.string().max(250),
   context: z.string().max(14000), heading: z.string().max(500),
   scrollY: z.number().nonnegative(), capturedAt: z.number().nonnegative(),
+  video: VideoSourceSchema.optional(),
 });
 export type Source = z.infer<typeof SourceSchema>;
 export const CaptureSchema = z.object({
@@ -43,6 +47,7 @@ export const CaptureSchema = z.object({
   attempts: z.number().int().nonnegative(), nextAttemptAt: z.number().nonnegative(),
   leaseUntil: z.number().nonnegative(), updatedAt: z.number().nonnegative(),
   unitsCreated: z.boolean().default(false),
+  deferredAnalysis: z.boolean().optional(), transcriptApproved: z.boolean().optional(),
 });
 export type Capture = z.infer<typeof CaptureSchema>;
 export const ScheduleSchema = z.object({
@@ -60,12 +65,14 @@ export const UnitSchema = z.object({
   suspended: z.boolean(), leech: z.boolean(), encounters: z.number().int().nonnegative(),
   createdAt: z.number().nonnegative(), updatedAt: z.number().nonnegative(),
   alternativeVi: z.string().max(8000).optional(),
+  reportedIssue: z.string().max(8000).optional(),
+  priority: z.enum(['auto', 'high', 'low']).optional(),
 });
 export type Unit = z.infer<typeof UnitSchema>;
-export type ExerciseMode = 'production' | 'cloze' | 'transfer';
+export type ExerciseMode = 'production' | 'cloze' | 'transfer' | 'dictation';
 export const ReviewSchema = z.object({
   id: z.string().uuid(), unitId: z.string().uuid(), at: z.number().nonnegative(),
-  rating: z.number().int().min(1).max(4), mode: z.enum(['production', 'cloze', 'transfer']),
+  rating: z.number().int().min(1).max(4), mode: z.enum(['production', 'cloze', 'transfer', 'dictation']),
   answer: z.string().max(8000), grade: GradeSchema.optional(),
   prior: ScheduleSchema, next: ScheduleSchema,
   durationMs: z.number().nonnegative(), assisted: z.boolean(),
@@ -78,6 +85,15 @@ export const SettingsSchema = z.object({
   backupDays: z.number().int().min(1).max(30).default(7),
   autoBackup: z.boolean().default(true),
   dailyNewLimit: z.number().int().min(1).max(50).default(10),
+  strongModel: z.string().regex(/^[a-zA-Z0-9._-]+$/).max(100).default('gemini-3.8-flash'),
+  dailyApiLimit: z.number().int().min(1).max(10000).default(50),
+  monthlyApiLimit: z.number().int().min(1).max(100000).default(1000),
+  learnerLevel: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).default('B1'),
+  inflectionMatching: z.boolean().default(false),
+  weeklyAutomatic: z.boolean().default(false),
+  targetedAutomatic: z.boolean().default(true),
+  optimizationEnabled: z.boolean().default(true),
+  fsrsWeights: z.array(z.number().finite()).length(21).optional(),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 export const defaultSettings = SettingsSchema.parse({});
@@ -90,7 +106,7 @@ export function canonical(k: Knowledge): string {
 }
 export function validateAnalysis(raw: unknown, source: Source): Analysis {
   const analysis = AnalysisSchema.parse(raw);
-  const original = normalize(source.exact + ' ' + source.context);
+  const original = normalize(source.exact + ' ' + (source.originalExact ?? '') + ' ' + source.context + (source.video && analysis.transcript ? ' ' + analysis.transcript.textEn : ''));
   for (const item of analysis.knowledge) {
     if (!original.includes(normalize(item.evidence))) throw new Error('AI trích dẫn nội dung không có trong ngữ cảnh. Hãy thử phân tích lại.');
     if ((item.cloze.sentence.match(/\[\[blank\]\]/g) ?? []).length !== 1) throw new Error('Bài điền khuyết phải có đúng một chỗ trống.');

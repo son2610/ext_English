@@ -93,6 +93,20 @@ Snapshot dùng cùng export format. Downloads/MachDoc là file ngoài vùng exte
 
 ## Nâng cấp nhiều năm
 
-IDB hiện version 1. Thêm store/index dùng `upgrade` tăng database version; thay schema domain tăng export/analysis version tương ứng và có migrator thuần để test fixture cũ. Giữ raw capture, full analysis và review history để có thể tái lập unit/scheduler khi thay thư viện. Khóa thư viện bằng package-lock; xem lịch sử npm lock trước khi nâng scheduler.
+IDB hiện **version 2**, nâng tại chỗ từ version 1. Export hiện **version 2**, vẫn đọc version 1 (ví dụ phía trên là format cũ). Analysis vẫn schemaVersion 1 với trường transcript tùy chọn tương thích ngược. Giữ raw capture, full analysis và review history để có thể tái lập unit/scheduler khi thay thư viện. Khóa thư viện bằng package-lock; xem lịch sử npm lock trước khi nâng scheduler.
+
+Các store mới: `assessments` (bài chấm lưu trước rating), `usage` (request/tác vụ/model/token), `practices` (bài luyện lỗi đang chờ và đã làm), `weekly` (đoạn tổng hợp + coverage), `dictionary` (nguồn định nghĩa/IPA), `optimization` (weights trước/sau + validation). Export v2 chứa cả sáu store và settings weights. Grade lỗi thêm category/l1NoteVi tùy chọn cho dữ liệu cũ. Import vẫn bảo toàn lịch, nhưng ghép assessment độc lập theo ID vì bài chấm chưa nhất thiết có review. Import grade từ review v1 cũng bổ sung assessment còn thiếu.
+
+`source.video` giữ videoId/start/end/language/automatic/timing/captionSource. Không lưu signed caption URL hoặc media. `capture.deferredAnalysis` tách lưu khi xem khỏi hàng đợi đã được yêu cầu chạy. `analysis.transcript` giữ bản sửa, cảnh báo và diff; `transcriptApproved` ghi việc xác nhận khi chưa chắc chắn. Các schema bổ sung được xuất tại `docs/enrichment.schema.json`. Xem [kiến trúc 0.2.0](EXTENSIONS.vi.md) cho invariant và trade-off.
 
 Tại vài nghìn capture, giới hạn output AI và ngân hàng ví dụ giúp dữ liệu có trần theo mục. Bộ sưu tập nhiều năm có thể lớn ở review log và 5 snapshots; cần aggregate/cursor và backup streaming ở phase sau. Giới hạn import 150 MB là giới hạn MVP minh bạch, không là giới hạn IndexedDB của Chrome.
+
+## Chỉnh sửa và xoá (0.2.1)
+
+`source.originalExact?: string` giữ câu thu thập ban đầu khi người dùng sửa `exact`. Trường tùy chọn được export/import v2, không cần nâng IDB. Text Fragment dùng câu ban đầu để tìm đúng vị trí. Với video, phục hồi ASR và dictation dùng cả câu ban đầu; AI phân tích nhận `selected` là phần người dùng đã sửa, cùng câu gốc và transcript phục hồi làm ngữ cảnh. Mốc clip không đổi khi rút gọn thành từ.
+
+`data/library.ts` tách thao tác quản lý khỏi UI. Đổi riêng note giữ phân tích; đổi `exact` bỏ phân tích/duyệt transcript cũ và huỷ lease xử lý, chuyển về saved, cho phân tích lại theo yêu cầu. Các unit đã tạo tồn tại độc lập, giữ ID và lịch; phân tích lại tiếp tục được duyệt/ghép theo cơ chế chống trùng. Sửa knowledge cập nhật nội dung và bài tập cùng bản ghi, giữ review/FSRS; bỏ bài luyện chưa làm và giải thích thay thế có thể đã lỗi thời. Kiểm tra updatedAt ngăn ghi đè thay đổi từ tab khác.
+
+Xoá dùng một giao dịch đọc/ghi bao gồm snapshot đầy đủ, captures, units và các store liên quan: xoá capture gỡ ID khỏi unit dùng chung, chỉ xoá unit nếu không còn nguồn; xoá unit trực tiếp giữ capture. Cascade xoá reviews, assessments, practices và encounters của unit bị xoá. Coverage của weekly được lọc, bản không còn coverage bị xoá; văn bản tổng hợp lịch sử còn coverage khác vẫn được giữ. Usage, từ điển và kết quả hiệu chỉnh không liên kết unitId nên giữ nguyên. Snapshot giữ 5 bản gần nhất; không có file download tự động cho mỗi lần xoá. Hết dung lượng làm giao dịch thất bại toàn bộ, không xoá trước khi có snapshot.
+
+Kết quả AI tới muộn không tái tạo capture đã xoá hoặc phân tích trước lần sửa; lưu bài luyện/tổng hợp kiểm tra unit vẫn tồn tại trong cùng giao dịch. UI báo worker cập nhật badge, dấu nhận diện và note video đang mở. Import snapshot phục hồi ID đã mất theo quy tắc ghép cũ, không ghi đè tiến độ hay liên kết của unit đang có; có thể duyệt lại phân tích của ngữ cảnh để ghép thêm ví dụ.

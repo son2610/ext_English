@@ -18,25 +18,26 @@ export async function allData() {
 export async function capture(source: Source, note: string, analyze: boolean): Promise<{ id: string; duplicate: boolean }> {
   const database = await db;
   const tx = database.transaction('captures', 'readwrite');
-  const existing = (await tx.store.getAll()).find(c => c.source.frameUrl === source.frameUrl && normalize(c.source.exact) === normalize(source.exact));
+  const existing = (await tx.store.getAll()).find(c => c.source.video && source.video ? c.source.video.videoId === source.video.videoId && Math.abs(c.source.video.start - source.video.start) < 0.4 && normalize(c.source.exact) === normalize(source.exact) : !c.source.video && !source.video && c.source.frameUrl === source.frameUrl && normalize(c.source.exact) === normalize(source.exact));
   if (existing) {
     existing.note = [existing.note, note].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join('\n');
-    if (analyze && !existing.analysis && existing.status !== 'processing') { existing.status = 'queued'; existing.attempts = 0; existing.nextAttemptAt = 0; }
+    if (analyze && !existing.analysis && existing.status !== 'processing') { existing.status = source.video ? 'saved' : 'queued'; existing.deferredAnalysis = !!source.video; existing.attempts = 0; existing.nextAttemptAt = 0; }
     existing.updatedAt = Date.now();
     await tx.store.put(existing); await tx.done;
     return { id: existing.id, duplicate: true };
   }
   const id = crypto.randomUUID();
-  await tx.store.add({ id, source, note, status: analyze ? 'queued' : 'saved', attempts: 0, nextAttemptAt: 0, leaseUntil: 0, updatedAt: Date.now(), unitsCreated: false });
+  await tx.store.add({ id, source, note, status: analyze && !source.video ? 'queued' : 'saved', deferredAnalysis: !!source.video && analyze, attempts: 0, nextAttemptAt: 0, leaseUntil: 0, updatedAt: Date.now(), unitsCreated: false });
   await tx.done;
   return { id, duplicate: false };
 }
 export async function enqueue(ids: string[]) {
   const tx = (await db).transaction('captures', 'readwrite');
-  for (const id of ids) {
-    const item = await tx.store.get(id);
+  const items = await Promise.all(ids.map(id => tx.store.get(id)));
+  if (items.some(item => item && !item.unitsCreated && item.source.video && !/^en(?:-|$)/i.test(item.source.video.language))) { await tx.done; throw new Error('Phụ đề chưa xác định là tiếng Anh. Hãy chọn track tiếng Anh trước.'); }
+  for (const item of items) {
     if (!item || item.unitsCreated || (item.status === 'processing' && item.leaseUntil > Date.now())) continue;
-    await tx.store.put({ ...item, status: 'queued', error: undefined, attempts: 0, nextAttemptAt: 0, updatedAt: Date.now() });
+    await tx.store.put({ ...item, status: 'queued', deferredAnalysis: false, error: undefined, attempts: 0, nextAttemptAt: 0, updatedAt: Date.now() });
   }
   await tx.done;
 }
@@ -67,6 +68,7 @@ export async function acceptAnalysis(id: string, separateKeys: string[] = []): P
   const tx = (await db).transaction(['captures', 'units'], 'readwrite');
   const item = await tx.objectStore('captures').get(id);
   if (!item?.analysis || item.unitsCreated) { await tx.done; return; }
+  if (item.analysis.transcript?.uncertain && !item.transcriptApproved) { await tx.done; throw new Error('Transcript chưa chắc chắn. Hãy đối chiếu audio và xác nhận bản sửa trước.'); }
   const units = await tx.objectStore('units').getAll();
   for (const k of item.analysis.knowledge) {
     const duplicate = separateKeys.includes(k.key) ? undefined : findDuplicate(k, units);
@@ -84,11 +86,14 @@ export async function acceptAnalysis(id: string, separateKeys: string[] = []): P
   await tx.done;
 }
 export async function addManualUnit(id: string): Promise<void> {
-  const item = await (await db).get('captures', id);
+  const tx = (await db).transaction('captures', 'readwrite');
+  const item = await tx.store.get(id);
+  if (item?.unitsCreated) { await tx.done; return; }
   if (!item || !item.note.trim()) throw new Error('Hãy ghi nghĩa tiếng Việt trước khi tạo bài học thủ công.');
   if (item.source.exact.length > 500) throw new Error('Bài thủ công cần đoạn chọn ngắn hơn 500 ký tự.');
   const k: Knowledge = { key: `manual:${normalize(item.source.exact)}`.slice(0, 490), kind: 'phrase', group: 'Ghi chú cá nhân', name: 'Cụm từ của bạn', form: item.source.exact, meaningVi: item.note, explanationVi: item.note, evidence: item.source.exact, examples: [{ en: item.source.exact, vi: item.note }, { en: item.source.exact, vi: item.note }], production: { instructionVi: `Viết lại bằng tiếng Anh: ${item.note}`, answerEn: item.source.exact }, cloze: { sentence: '[[blank]]', answer: item.source.exact, hintVi: item.note.slice(0, 500) } };
-  await (await db).put('captures', { ...item, analysis: { schemaVersion: 1, meaningVi: item.note, contextNoteVi: 'Ghi chú thủ công; chưa qua AI.', knowledge: [k] }, status: 'ready', updatedAt: Date.now() });
+  await tx.store.put({ ...item, analysis: { schemaVersion: 1, meaningVi: item.note, contextNoteVi: 'Ghi chú thủ công; chưa qua AI.', knowledge: [k] }, status: 'ready', leaseUntil: 0, updatedAt: Date.now() });
+  await tx.done;
   await acceptAnalysis(id);
 }
 export async function recordReview(input: { id: string; unitId: string; expectedReps: number; rating: 1 | 2 | 3 | 4; mode: ExerciseMode; answer: string; grade?: Grade; durationMs: number; assisted: boolean }): Promise<void> {
@@ -100,7 +105,7 @@ export async function recordReview(input: { id: string; unitId: string; expected
   const now = Date.now();
   // Looking at hints is recorded as a failed unaided retrieval, regardless of self-rating.
   const rating = input.assisted ? 1 : input.rating;
-  const next = scheduler.review(unit.schedule, rating, now, config.retention);
+  const next = scheduler.review(unit.schedule, rating, now, config.retention, config.fsrsWeights);
   const review: Review = { id: input.id, unitId: input.unitId, mode: input.mode, answer: input.answer, grade: input.grade, durationMs: input.durationMs, assisted: input.assisted, rating, at: now, prior: unit.schedule, next };
   const failures = unit.failures + (rating === 1 ? 1 : 0);
   const leech = failures >= 5;
@@ -108,7 +113,7 @@ export async function recordReview(input: { id: string; unitId: string; expected
   await tx.objectStore('units').put({ ...unit, schedule: next, failures, leech, suspended: leech || unit.suspended, updatedAt: now });
   await tx.done;
 }
-export async function reviseUnit(id: string, patch: Pick<Partial<Unit>, 'suspended' | 'alternativeVi'>): Promise<void> {
+export async function reviseUnit(id: string, patch: Pick<Partial<Unit>, 'suspended' | 'alternativeVi' | 'reportedIssue' | 'priority'>): Promise<void> {
   const tx = (await db).transaction('units', 'readwrite');
   const unit = await tx.store.get(id);
   if (unit) await tx.store.put({ ...unit, ...patch, failures: patch.suspended === false ? 0 : unit.failures, leech: patch.suspended === false ? false : unit.leech, updatedAt: Date.now() });

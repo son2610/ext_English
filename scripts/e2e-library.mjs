@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+
+export async function checkLibraryManagement({ app, web, shadow, dialog, clickClass, database, waitUntil, checks, captured }) {
+  await clickClass(web, 'save'); await web.locator('[data-mach-doc="video-editor"]').waitFor({ state: 'attached' });
+  await clickClass(web, 'edit-text');
+  const drafts = await shadow(web, dialog, `function(){
+    const text=this.querySelector('.selected-text');
+    const radios=[...this.querySelectorAll('input[name=sentence]')];
+    const selected=radios.findIndex(r=>r.checked);
+    text.value='helped';text.dispatchEvent(new Event('input'));
+    radios[(selected+1)%radios.length].click();
+    const other=text.value;
+    radios[selected].click();
+    return {restored:text.value,other,hidden:text.parentElement.parentElement.hidden};
+  }`);
+  assert.equal(drafts.restored, 'helped'); assert.notEqual(drafts.other, 'helped'); assert.equal(drafts.hidden, false);
+  await shadow(web, dialog, `function(){const t=this.querySelector('.selected-text');t.value='   ';t.dispatchEvent(new Event('input'));this.querySelector('form').requestSubmit()}`);
+  assert.ok((await shadow(web, dialog, 'function(){return this.querySelector(".error").textContent}')).includes('Nhập câu'));
+  assert.equal((await database(app, 'captures')).length, 1);
+  await clickClass(web, 'reset-text');
+  assert.equal(await shadow(web, dialog, 'function(){return this.querySelector(".selected-text").value}'), captured.source.exact);
+  await shadow(web, dialog, `function(){const t=this.querySelector('.selected-text');t.value='  helped  ';t.dispatchEvent(new Event('input'));this.querySelector('.note').value='Đã giúp';this.querySelector('.queue').checked=false;this.querySelector('form').requestSubmit()}`);
+  await waitUntil(async () => (await database(app, 'captures')).length === 2, 'edited word saved from video');
+  const edited = (await database(app, 'captures')).find(c => c.id !== captured.id);
+  assert.equal(edited.source.exact, 'helped'); assert.equal(edited.source.originalExact, captured.source.exact);
+  assert.deepEqual(edited.source.video, captured.source.video); assert.equal(edited.note, 'Đã giúp');
+  checks.push('video-edit-per-choice-drafts-reset-empty-guard', 'video-edit-keeps-original-quote-and-timing');
+
+  await app.reload();
+  const card = () => app.locator('.capture-card').filter({ has: app.locator('.source-quote', { hasText: /^helped$/ }) });
+  await card().getByRole('button', { name: 'Chỉnh sửa câu / ghi chú' }).click();
+  let form = app.getByRole('form', { name: 'Chỉnh sửa ngữ cảnh' });
+  await form.getByLabel('Câu hoặc từ muốn lưu').fill('temporary');
+  await form.getByRole('button', { name: 'Huỷ chỉnh sửa' }).click();
+  assert.equal((await database(app, 'captures')).find(c => c.id === edited.id).source.exact, 'helped');
+  await card().getByRole('button', { name: 'Chỉnh sửa câu / ghi chú' }).click();
+  await form.getByLabel('Câu hoặc từ muốn lưu').fill('had known');
+  await form.getByLabel('Ghi chú của bạn').fill('Đã biết trước');
+  await form.getByRole('button', { name: 'Lưu chỉnh sửa', exact: true }).click();
+  await app.getByText('Đã lưu chỉnh sửa ngữ cảnh.', { exact: true }).waitFor();
+  let current = (await database(app, 'captures')).find(c => c.id === edited.id);
+  assert.equal(current.source.exact, 'had known'); assert.equal(current.source.originalExact, captured.source.exact); assert.equal(current.note, 'Đã biết trước');
+  await waitUntil(async () => (await shadow(web, (_, attrs) => attrs.class === 'notes', 'function(){return [...this.querySelectorAll(".note span")].map(e=>e.textContent)}')).includes('had known'), 'edited note panel refreshed');
+  const editedCard = app.locator('.capture-card').filter({ has: app.locator('.source-quote', { hasText: /^had known$/ }) });
+  await editedCard.getByRole('button', { name: 'Tạo bài từ ghi chú' }).click();
+  await app.getByText('Đã tạo bài viết lại từ ghi chú của bạn.', { exact: true }).waitFor();
+  const before = (await database(app, 'units'))[0];
+  await editedCard.getByRole('button', { name: 'Chỉnh sửa bài học' }).click();
+  const unitForm = app.getByRole('form', { name: 'Chỉnh sửa bài học' });
+  await unitForm.getByLabel('Nghĩa tiếng Việt', { exact: true }).fill('Đã biết trước thời điểm đó');
+  await unitForm.getByText('Chỉnh sửa ví dụ & đáp án', { exact: true }).click();
+  await unitForm.getByLabel('Đáp án bài viết', { exact: true }).fill('I had known.');
+  await unitForm.getByRole('button', { name: 'Lưu bài học', exact: true }).click();
+  await app.getByText('Đã sửa bài học, giữ nguyên lịch ôn và tiến độ.', { exact: true }).waitFor();
+  const after = (await database(app, 'units'))[0];
+  assert.equal(after.id, before.id); assert.deepEqual(after.schedule, before.schedule); assert.equal(after.knowledge.production.answerEn, 'I had known.');
+  await app.screenshot({ path: 'test-results/library-management.png', fullPage: true });
+  checks.push('library-edit-cancel-save-source-note', 'library-edit-unit-answer-keeps-schedule');
+
+  await editedCard.getByRole('button', { name: 'Xoá bài học', exact: true }).click();
+  await editedCard.getByRole('button', { name: 'Huỷ xoá' }).click(); assert.equal((await database(app, 'units')).length, 1);
+  await editedCard.getByRole('button', { name: 'Xoá bài học', exact: true }).click();
+  await editedCard.getByRole('button', { name: 'Xác nhận xoá' }).click();
+  await waitUntil(async () => (await database(app, 'units')).length === 0, 'unit deletion');
+  await editedCard.getByRole('button', { name: 'Xoá ngữ cảnh', exact: true }).click();
+  await editedCard.getByRole('button', { name: 'Xác nhận xoá' }).click();
+  await waitUntil(async () => (await database(app, 'captures')).length === 1, 'capture deletion');
+  const snapshots = await database(app, 'backups');
+  assert.ok(snapshots.some(s => JSON.parse(s.json).units.some(u => u.id === before.id)));
+  await waitUntil(async () => (await shadow(web, (_, attrs) => attrs.class === 'notes', 'function(){return [...this.querySelectorAll(".note")].map(e=>e.dataset.noteId)}')).join() === captured.id, 'note panel refreshed');
+  assert.equal((await database(app, 'usage')).length, 0);
+  checks.push('library-delete-cancel-confirm-and-recovery-snapshot');
+}

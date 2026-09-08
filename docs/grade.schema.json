@@ -21,7 +21,7 @@
       "maxLength": 8000
     },
     "errors": {
-      "maxItems": 12,
+      "maxItems": 600,
       "type": "array",
       "items": {
         "type": "object",
@@ -40,6 +40,25 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 8000
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "article",
+              "tense_aspect",
+              "preposition",
+              "plural",
+              "word_order",
+              "agreement",
+              "word_choice",
+              "auxiliary",
+              "spelling",
+              "other"
+            ]
+          },
+          "l1NoteVi": {
+            "type": "string",
+            "maxLength": 3000
           }
         },
         "required": [

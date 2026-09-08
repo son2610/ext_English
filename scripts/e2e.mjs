@@ -98,7 +98,7 @@ try {
   await clickClosed(web, 'icon'); await assertDialogVisible(web); await web.keyboard.press('Escape');
   // Seed a second, AI-ready capture with deterministic fixture data, never a live API call.
   await worker.evaluate(async analysis => {
-    const database = await new Promise((resolve, reject) => { const request = indexedDB.open('mach-doc', 1); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    const database = await new Promise((resolve, reject) => { const request = indexedDB.open('mach-doc'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
     const tx = database.transaction('captures', 'readwrite');
     const request = tx.objectStore('captures').getAll();
     request.onsuccess = () => { const first = request.result[0]; tx.objectStore('captures').put({ ...first, id: crypto.randomUUID(), unitsCreated: false, status: 'ready', analysis, source: { ...first.source, url: 'https://example.com/ai', frameUrl: 'https://example.com/ai' } }); };

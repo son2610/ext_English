@@ -1,4 +1,6 @@
-# Thiết kế Mạch Đọc
+# Thiết kế nền tảng MVP Mạch Đọc
+
+**Tài liệu lịch sử của bản 0.1.0.** Các phần về YouTube, hồ sơ lỗi, morphology, schema mới, model theo tác vụ và hiệu chỉnh FSRS đã được bổ sung trong [thiết kế bản 0.2.0](EXTENSIONS.vi.md). Khi có khác biệt về trạng thái tính năng, dùng tài liệu 0.2.0.
 
 ## Phạm vi và những điều không thể hứa
 

@@ -4,6 +4,8 @@ import { db } from '../data/db';
 import { snapshot } from '../data/backup';
 import { GeminiProvider, AIError } from '../ai/provider';
 import { z } from 'zod';
+import { videoMessage, openVideoClip } from './video';
+import { expandInflections } from '../learning/inflections';
 
 // Keys are never placed in content-script messages or exported data.
 const secureStorage = chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
@@ -20,7 +22,7 @@ async function pump() {
     const job = await claimJob();
     if (!job) return;
     try {
-      const provider = new GeminiProvider(keyResult.geminiKey, config.model);
+      const provider = new GeminiProvider(keyResult.geminiKey, config.model, config.strongModel);
       await completeJob(job, await provider.analyze(job.source, job.note));
     } catch (error) {
       const retryable = error instanceof AIError && error.retryable && job.attempts < 4;
@@ -91,9 +93,13 @@ chrome.runtime.onStartup.addListener(() => { void initialize(); });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'maintenance') void Promise.allSettled([pump(), badge(), backupIfDue()]);
 });
-chrome.action.onClicked.addListener(() => { void chrome.tabs.create({ url: uiUrl }); });
+chrome.action.onClicked.addListener(tab => {
+  if (tab.id) void chrome.tabs.sendMessage(tab.id, { type: 'capture-video' }).then(reply => { if (!reply?.handled) void chrome.tabs.create({ url: uiUrl }); }, () => chrome.tabs.create({ url: uiUrl }));
+  else void chrome.tabs.create({ url: uiUrl });
+});
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === 'review') void chrome.tabs.create({ url: `${uiUrl}#review` });
+  if (command === 'capture-video' && tab?.id) void chrome.tabs.sendMessage(tab.id, { type: 'capture-video' }).catch(() => undefined);
   if (command === 'capture' && tab?.id) void chrome.tabs.sendMessage(tab.id, { type: 'quick-capture' }).catch(() => chrome.tabs.create({ url: `${uiUrl}#library` }));
 });
 chrome.runtime.onMessage.addListener((raw: unknown, sender, respond: (reply: Reply<unknown>) => void) => {
@@ -103,16 +109,22 @@ chrome.runtime.onMessage.addListener((raw: unknown, sender, respond: (reply: Rep
   if (!trustedUI && !content) { respond({ ok: false, error: 'Nguồn yêu cầu không hợp lệ.' }); return false; }
   void (async (): Promise<unknown> => {
     if (trustedUI) {
-      const message = z.object({ type: z.enum(['wake', 'backup-now', 'settings-changed']) }).parse(raw);
+      if ('type' in raw && raw.type === 'play-source' && 'video' in raw) { await openVideoClip(raw.video, 'blind' in raw && raw.blind === true); return null; }
+      const message = z.object({ type: z.enum(['wake', 'backup-now', 'settings-changed', 'library-changed']) }).parse(raw);
       if (message.type === 'backup-now') { await snapshot(); await downloadBackup(); }
       if (message.type === 'wake') { void pump(); await badge(); }
-      if (message.type === 'settings-changed') {
+      if (message.type === 'settings-changed' || message.type === 'library-changed') {
         const tabs = await chrome.tabs.query({});
         await Promise.allSettled(tabs.filter(t => t.id).map(t => chrome.tabs.sendMessage(t.id!, { type: 'refresh-highlights' })));
+        if (message.type === 'library-changed') {
+          await Promise.allSettled(tabs.filter(t => t.id).map(t => chrome.tabs.sendMessage(t.id!, { type: 'video-notes-changed' })));
+          await badge();
+        }
       }
       return null;
     }
     const message = ContentMessageSchema.parse(raw);
+    if (message.type.startsWith('video-')) { const result = await videoMessage(message, sender); if (message.type === 'video-release-batch') void pump(); return result; }
     if (message.type === 'capture' || message.type === 'open-editor') {
       const topUrl = sender.tab?.url;
       const frameUrl = sender.url;
@@ -122,12 +134,14 @@ chrome.runtime.onMessage.addListener((raw: unknown, sender, respond: (reply: Rep
         return null;
       }
       const result = await capture(source, message.note, message.analyze);
-      if (message.analyze) void pump();
+      if (source.video) void chrome.tabs.sendMessage(sender.tab!.id!, { type: 'video-notes-changed' }).catch(() => undefined);
+      else if (message.analyze) void pump();
       return result;
     }
     if (message.type === 'lexicon') {
-      if (!(await settings()).highlighting) return [];
-      return (await (await db).getAll('units')).filter(u => u.knowledge.kind === 'phrase').slice(0, 3000).map(u => ({ id: u.id, text: u.knowledge.form, meaning: u.knowledge.meaningVi }));
+      const config = await settings(); if (!config.highlighting) return [];
+      const patterns = (await (await db).getAll('units')).filter(u => u.knowledge.kind === 'phrase').slice(0, 3000).map(u => ({ id: u.id, text: u.knowledge.form, meaning: u.knowledge.meaningVi }));
+      return config.inflectionMatching ? expandInflections(patterns) : patterns;
     }
     if (message.type === 'encounter') {
       if ((await settings()).highlighting) for (const id of message.unitIds) await encounter(id, sender.url ?? '');

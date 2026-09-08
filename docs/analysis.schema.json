@@ -157,6 +157,57 @@
         ],
         "additionalProperties": false
       }
+    },
+    "transcript": {
+      "type": "object",
+      "properties": {
+        "textEn": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000
+        },
+        "uncertain": {
+          "type": "boolean"
+        },
+        "warningVi": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "changes": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "original": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "corrected": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "reasonVi": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "original",
+              "corrected",
+              "reasonVi"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "textEn",
+        "uncertain",
+        "warningVi",
+        "changes"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [

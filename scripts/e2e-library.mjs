@@ -1,3 +1,4 @@
+import { openCapture, closeCapture } from './library-test-helpers.mjs';
 import assert from 'node:assert/strict';
 
 export async function checkLibraryManagement({ app, web, shadow, dialog, clickClass, database, waitUntil, checks, captured }) {
@@ -26,7 +27,7 @@ export async function checkLibraryManagement({ app, web, shadow, dialog, clickCl
   assert.deepEqual(edited.source.video, captured.source.video); assert.equal(edited.note, 'Đã giúp');
   checks.push('video-edit-per-choice-drafts-reset-empty-guard', 'video-edit-keeps-original-quote-and-timing');
 
-  await app.reload();
+  await app.reload(); await openCapture(app, 'helped');
   const card = () => app.locator('.capture-card').filter({ has: app.locator('.source-quote', { hasText: /^helped$/ }) });
   await card().getByRole('button', { name: 'Chỉnh sửa câu / ghi chú' }).click();
   let form = app.getByRole('form', { name: 'Chỉnh sửa ngữ cảnh' });

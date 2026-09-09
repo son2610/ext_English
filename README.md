@@ -1,6 +1,12 @@
-# Mạch Đọc
+# LumaRead — Tiếng Anh từ ngữ cảnh
 
-Chrome Extension học tiếng Anh từ chính những trang bạn đọc và video YouTube bạn xem. Bản **0.2.3** có sửa câu trước khi lưu và sửa/xoá ngữ cảnh, bài học trong thư viện; giữ các tính năng hồ sơ lỗi, dictation, bản đồ ngữ pháp và tổng hợp tuần. TypeScript strict, Manifest V3, React, IndexedDB, FSRS thật qua `ts-fsrs`. Không có backend của ứng dụng, không analytics, không tải mã thực thi từ CDN. Capture và ôn thủ công chạy offline; Gemini, từ điển và video gốc cần mạng.
+Chrome Extension học tiếng Anh từ bài đọc và video YouTube, trước đây là Mạch Đọc. Bản **0.3.0** có thư viện thẻ gọn, nhóm và nhãn màu, tìm kiếm không dấu, lọc tiến độ, thao tác hàng loạt và phân trang 24 câu. Font Noto Sans tiếng Việt được đóng gói cùng icon mới; tên nhà phát hành **Blue**. TypeScript strict, MV3, React, IndexedDB, FSRS. Không có backend riêng; Gemini, từ điển và video gốc cần mạng.
+
+- [Cách dùng và thiết kế thư viện 0.3](docs/LIBRARY-0.3.vi.md)
+- [Bộ nội dung/ảnh Chrome Web Store](artifacts/store/LISTING.vi.md)
+- [Icon, nhận diện và prompt](artifacts/store/BRAND.vi.md)
+- [Chính sách riêng tư](public/privacy.html)
+
 
 Bản 0.2.3 giảm độ phức tạp schema gửi Gemini, tách schema phục hồi phụ đề khỏi phân tích ngữ pháp. Nếu Google báo rõ lỗi schema, thử lại đúng một lần bằng JSON mode, giữ model đã chọn và vẫn kiểm tra đầy đủ bằng Zod trên máy trước khi tạo bài. Các lỗi HTTP 400 khác không tự thử lại; thông báo hiển thị tác vụ, model, mã lỗi và chi tiết từ Google, có ẩn API key. Mỗi lần thử được tính vào hạn mức cục bộ. Bấm **Nhờ AI phân tích** trên câu bị lỗi để thử lại; không cần lưu câu lần nữa. Số phiên bản của giao diện nằm ở cuối trang để kiểm tra tab đã tải mã mới.
 
@@ -10,7 +16,7 @@ Bản 0.2.2 bỏ khai báo toàn màn hình trùng trong iframe YouTube, sửa c
 
 Đã có thư mục **`dist/`** được build trong workspace này.
 
-**Đang dùng bản cũ:** vào `chrome://extensions` → **Reload / Tải lại** Mạch Đọc đang trỏ tới cùng thư mục `dist`, rồi tải lại tab ứng dụng và trang đọc. Không cần gỡ extension. Dữ liệu được nâng từ IDB v1 lên v2 tại chỗ; export JSON v1 vẫn nhập được.
+**Đang dùng bản cũ:** vào `chrome://extensions` → **Reload / Tải lại** extension đang trỏ tới cùng thư mục `dist`, rồi tải lại tab ứng dụng và trang đọc. Không cần gỡ extension. Dữ liệu được nâng từ IDB v1/v2 lên v3 tại chỗ; export JSON v1/v2 vẫn nhập được. Tên mới không đổi cơ sở dữ liệu hoặc key của bản đang cài.
 
 1. Mở `chrome://extensions`, bật **Chế độ dành cho nhà phát triển**.
 2. Chọn **Tải tiện ích đã giải nén / Load unpacked**, trỏ tới `D:\project code\gg_ext_english\dist`.
@@ -25,10 +31,10 @@ Chrome 120 trở lên. Dùng Chromium/Chrome trên desktop. Extension không đ�
 - **Lưu nhanh:** `Alt+Shift+S`, không gọi AI. **Ôn tập:** `Alt+Shift+R`. Đổi phím trong `chrome://extensions/shortcuts` nếu tổ hợp bị hệ điều hành/trang web chiếm.
 - **Lưu từ YouTube:** bật CC English, nhấn `Alt+Shift+Y` hoặc **Lưu câu**. Video dừng, bạn chọn trong các câu vừa nói. Mốc từ track giữ start/end; fallback hiển thị rõ mốc ước lượng. Checkbox AI chỉ đánh dấu phân tích sau, không gọi ngay lúc lưu. Cuối video có gợi ý chạy lô; cũng có thể chọn trong thư viện.
 - **Sửa trước khi lưu:** trong hộp YouTube, bấm **Chỉnh sửa câu / từ muốn lưu**, nhập câu đã sửa hoặc chỉ một từ/cụm từ. Mỗi lựa chọn giữ bản nháp riêng; **Dùng lại câu gốc** khôi phục lựa chọn hiện tại. Giữ transcript gốc và start/end để nghe lại cả câu; AI tập trung vào phần bạn đã chỉnh.
-- **Quản lý thư viện:** mỗi ngữ cảnh có **Chỉnh sửa câu / ghi chú** và **Xoá ngữ cảnh**; mỗi bài đã tạo có **Chỉnh sửa bài học** và **Xoá bài học**. Sửa bài giữ ID, tiến độ và lịch FSRS. Khi sửa từ/công thức, kiểm tra cả ví dụ và đáp án trong phần mở rộng. Đổi câu nguồn bỏ phân tích cũ, cho phép phân tích lại khi cần, giữ các bài học độc lập đã tạo; đổi riêng ghi chú giữ phân tích.
+- **Quản lý thư viện:** dùng **＋ Nhóm & nhãn** để tạo/sửa/xoá danh mục. Gắn nhãn hoặc chuyển nhóm cho từng câu trong chi tiết, hoặc chọn nhiều thẻ để thao tác hàng loạt. Bấm vào thẻ để mở cửa sổ chi tiết: mỗi ngữ cảnh có **Chỉnh sửa câu / ghi chú** và **Xoá ngữ cảnh**; mỗi bài đã tạo có **Chỉnh sửa bài học** và **Xoá bài học**. Sửa bài giữ ID, tiến độ và lịch FSRS. Khi sửa từ/công thức, kiểm tra cả ví dụ và đáp án trong phần mở rộng. Đổi câu nguồn bỏ phân tích cũ, cho phép phân tích lại khi cần, giữ các bài học độc lập đã tạo; đổi riêng ghi chú giữ phân tích.
 - **Xoá và khôi phục:** xoá có bước xác nhận, tạo snapshot cùng giao dịch với thao tác xoá (giữ 5 bản gần nhất). Xoá ngữ cảnh giữ các bài còn dùng ở ngữ cảnh khác; bài chỉ thuộc ngữ cảnh này và lịch sử liên quan sẽ bị xoá. Xoá riêng bài học giữ ngữ cảnh gốc. Tải snapshot trong **Cài đặt & dữ liệu → bản chụp trên máy**, nhập lại để phục hồi các mục đã mất; quy tắc import vẫn giữ tiến độ của ID đang có. Snapshot nằm trên máy, không tự tải file chỉ vì thao tác xoá.
 - **Note & luyện nghe:** mở lại video để thấy panel và marker, nhảy note trước/sau; **Luyện lại các đoạn** cho lặp/tốc độ/ẩn CC lần đầu. Thẻ có nguồn video có nút nghe clip gốc và mở nguồn nếu video chặn nhúng. Bản sửa ASR chưa chắc chắn phải được bạn xác nhận trước khi tạo bài học.
-- **Phân tích sau:** trong Thư viện chọn các đoạn → **Phân tích đã chọn**. Xử lý từng đoạn; mỗi phút lấy thêm một job. Chưa nhập key thì hàng đợi giữ nguyên. Rate limit/lỗi mạng được retry có backoff, tối đa 4 lần. Job đang chạy bị gián đoạn được nhận lại sau khi lease 90 giây hết.
+- **Phân tích sau:** trong Thư viện chọn các đoạn → **Phân tích (N)**. Xử lý từng đoạn; mỗi phút lấy thêm một job. Chưa nhập key thì hàng đợi giữ nguyên. Rate limit/lỗi mạng được retry có backoff, tối đa 4 lần. Job đang chạy bị gián đoạn được nhận lại sau khi lease 90 giây hết.
 - **Duyệt bài:** AI trả nghĩa Việt, cấu trúc, cụm từ, ví dụ mới, bài viết và cloze. Kiểm tra rồi bấm **Duyệt & đưa vào lịch ôn**. Mục trùng hiện đề xuất ghép ví dụ và giữ tiến độ; có thể chọn tạo riêng nếu khác nghĩa.
 - **Không dùng AI:** ghi nghĩa cho một đoạn ngắn dưới 500 ký tự rồi chọn **Tạo bài từ ghi chú**. Bài thủ công không có ví dụ mới do AI sinh.
 - **Ôn:** tự viết trước, nhờ AI chấm hoặc tự đối chiếu. `Chưa nhớ / Khó / Nhớ / Dễ` cập nhật lịch FSRS. Dùng gợi ý hoặc xem trước đáp án được ghi là chưa tự nhớ. Nghe câu/từ bằng giọng đọc sẵn có của máy/trình duyệt, không gọi API trả phí.
@@ -67,7 +73,7 @@ Nếu npm trên Windows bị lỗi `EPERM` khi resolve đường dẫn cài đ�
 node --preserve-symlinks-main 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --cache .npm-cache
 ```
 
-`npm test` bao gồm dữ liệu MVP, phụ đề/timing, lỗi/quota, migration v1→v2 và kiểm định tham số. `npm run test:e2e` chạy cả luồng đọc cũ lẫn luồng YouTube/hồ sơ mới trên extension thực trong Chromium. YouTube được mô phỏng bằng native media/TextTrack; Gemini và từ điển có response giả lập. `node scripts/performance.mjs` kiểm tra riêng 3.000 unit trên trang dài với CPU throttle. Kết quả/screenshot nằm trong `test-results/`; không dùng key thật.
+`npm test` có 64 kiểm thử dữ liệu, phụ đề/timing, lỗi/quota, nâng cấp DB v1/v2→v3, nhóm/nhãn và kiểm định tham số. `npm run test:e2e` chạy bốn bộ: luồng đọc, YouTube/hồ sơ, tương thích Gemini, thư viện 5.000 câu và font tiếng Việt. `npm run check:text` kiểm tra UTF-8, manifest và kích thước icon. YouTube được mô phỏng bằng native media/TextTrack; Gemini và từ điển có response giả lập. `node scripts/performance.mjs` kiểm tra riêng 3.000 unit đánh dấu trên trang dài với CPU throttle. Kết quả/screenshot nằm trong `test-results/`; không dùng key thật.
 
 ## Kiến trúc & dữ liệu
 

@@ -1,4 +1,19 @@
-# Nghiệm thu bản 0.2.3
+# Nghiệm thu bản 0.3.0 — LumaRead
+
+Kiểm tra ngày **08/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55** headless, profile riêng. TypeScript strict, build và kiểm tra UTF-8 đều đạt. **64/64 unit tests** đạt, gồm 7 kiểm thử nhóm/nhãn và nâng cấp thực tế DB v1/v2 lên v3. Bốn bộ E2E đều đạt; Gemini/YouTube dùng phản hồi/trang giả lập có kiểm soát, không dùng API key thật.
+
+- [Luồng capture/ôn tập/backup](../test-results/e2e-report.json): multi-node selection, CSS/CSP bất thường, iframe, biên viewport, tạo bài/ôn/chấm, đánh dấu DOM, export/import, offscreen download, worker restart.
+- [Luồng YouTube và học bổ sung](../test-results/enrichment-e2e-report.json): 26 kiểm tra, gồm sửa câu/từ, sửa/xoá ngữ cảnh/bài học, lịch ôn được giữ, snapshot khôi phục, nghe và chấm.
+- [Tương thích Gemini](../test-results/gemini-e2e-report.json): 5 kiểm tra, gồm hai giai đoạn phân tích, schema fallback đúng model, lỗi có chi tiết/ẩn key, đếm quota và không còn cảnh báo fullscreen trùng.
+- [Thư viện 0.3](../test-results/organization-e2e-report.json): 10 nhóm kiểm tra, gồm tạo/sửa/xoá danh mục, chuyển nhóm/gắn/gỡ nhãn hàng loạt, lọc/tìm không dấu, phân trang, bàn phím/focus/Escape, lưu qua reload, lịch FSRS không thay đổi, export đầy đủ, responsive và glyph tiếng Việt.
+
+Phép đo với **5.000 câu, tối đa 24 thẻ DOM, CPU chậm 4×**: tải thư viện **1.963 ms**, tìm kiếm **341 ms**, mở chi tiết **309 ms**. Thời gian gồm thao tác Playwright; đây là đo trên máy kiểm thử, không phải cam kết mọi thiết bị. Khi chưa mở chi tiết có **0** card chi tiết và **0** iframe ẩn. Noto Sans Regular cung cấp cả **334 glyph** trong mẫu kiểm tra tiếng Việt NFC/NFD, không dùng font thay thế. [Ảnh kiểm tra dấu](../test-results/vietnamese-glyphs.png), [thư viện](../test-results/library-grid.png), [chi tiết màn hình hẹp](../test-results/library-mobile-detail.png).
+
+`scripts/check-text.mjs` xác nhận UTF-8 của 54 file mã/giao diện, giới hạn tên/mô tả manifest, phiên bản thống nhất và PNG icon đúng kích thước. Bộ ảnh Store được tạo từ giao diện thật với dữ liệu minh hoạ; icon do imagegen tích hợp tạo, prompt trong `artifacts/store/BRAND.vi.md`. Chưa gửi bản này lên Chrome Web Store. Chrome tối thiểu khai báo 120; chưa chạy riêng trên Chrome 120.
+
+---
+
+## Lịch sử nghiệm thu 0.2.3
 
 Kiểm tra ngày **07/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55** headless, profile kiểm thử riêng. Bản build khai báo Chrome tối thiểu 120; chưa thực nghiệm riêng trên Chrome 120.
 

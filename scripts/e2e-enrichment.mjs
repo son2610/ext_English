@@ -1,3 +1,4 @@
+import { openCapture, closeCapture } from './library-test-helpers.mjs';
 import { chromium } from 'playwright';
 import { mkdir, writeFile, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -14,7 +15,7 @@ wav.write('RIFF', 0); wav.writeUInt32LE(36 + length * 2, 4); wav.write('WAVEfmt 
 for (let i = 0; i < length; i++) wav.writeInt16LE(Math.round(Math.sin(i / sampleRate * 440 * Math.PI * 2) * 600), 44 + i * 2);
 function fixture(url) {
   const fallback = url.includes('fallback=1'); const foreign = url.includes('foreign=1'); const signed = url.includes('signed=1');
-  return `<!doctype html><html><head><title>Phụ đề để kiểm thử</title><style>body{margin:30px;background:#fff;font:16px system-ui}main{display:flex;gap:24px}.html5-video-player{position:relative;width:720px}video{width:720px;height:400px;background:#151d18}#secondary{width:380px}.ytp-progress-bar{height:14px;background:#bbb;position:relative}.ytp-caption-window-container{padding:12px;background:#e8e8e8}.ytp-caption-segment{font:20px Georgia}</style></head><body><main><div class="html5-video-player" id="movie_player"><video controls preload="auto" src="https://www.youtube.com/__machdoc.wav"></video><div class="ytp-progress-bar"></div><div class="ytp-caption-window-container"><span class="ytp-caption-segment">${foreign ? 'Đây là phụ đề tiếng Việt' : 'if I had known'}</span></div></div><div id="secondary"></div></main><script>
+  return `<!doctype html><html lang="vi"><head><meta charset="UTF-8"><title>Phụ đề để kiểm thử</title><style>body{margin:30px;background:#fff;font:16px system-ui}main{display:flex;gap:24px}.html5-video-player{position:relative;width:720px}video{width:720px;height:400px;background:#151d18}#secondary{width:380px}.ytp-progress-bar{height:14px;background:#bbb;position:relative}.ytp-caption-window-container{padding:12px;background:#e8e8e8}.ytp-caption-segment{font:20px Georgia}</style></head><body><main><div class="html5-video-player" id="movie_player"><video controls preload="auto" src="https://www.youtube.com/__machdoc.wav"></video><div class="ytp-progress-bar"></div><div class="ytp-caption-window-container"><span class="ytp-caption-segment">${foreign ? 'Đây là phụ đề tiếng Việt' : 'if I had known'}</span></div></div><div id="secondary"></div></main><script>
     const video=document.querySelector('video');
     ${!fallback && !signed ? `const track=video.addTextTrack('captions','English','en'); track.mode='hidden'; track.addCue(new VTTCue(1,3,'The first sentence.')); track.addCue(new VTTCue(5.25,9.8,'If I had known, I would have helped.')); track.addCue(new VTTCue(10,13,'Now we continue.'));` : ''}
     document.getElementById('movie_player').getPlayerResponse=()=>({videoDetails:{videoId:new URL(location.href).searchParams.get('v')||location.pathname.split('/').pop()},captions:{playerCaptionsTracklistRenderer:{captionTracks:${signed ? `[{baseUrl:'https://www.youtube.com/api/timedtext?v=${videoId}&signature=fixture',languageCode:'en',kind:'asr'}]` : '[]'}}}});
@@ -48,7 +49,7 @@ try {
   });
   await context.route('https://www.youtube-nocookie.com/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: fixture(route.request().url()) }));
   const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker'); const extensionId = new URL(worker.url()).host;
-  const app = await context.newPage(); await app.goto(`chrome-extension://${extensionId}/app.html#library`); await app.getByRole('heading', { name: 'Những điều bạn muốn hiểu.' }).waitFor();
+  const app = await context.newPage(); await app.goto(`chrome-extension://${extensionId}/app.html#library`); await app.getByRole('heading', { name: 'Thư viện ngữ cảnh.' }).waitFor();
   const web = await context.newPage(); await web.goto(`https://www.youtube.com/watch?v=${videoId}&list=PLfixture`);
   await web.locator('[data-mach-doc="youtube"]').waitFor(); await web.waitForFunction(() => document.querySelector('video').readyState >= 1);
   assert.equal(await web.locator('[data-mach-doc="capture"]').evaluate(el => getComputedStyle(el).display), 'none');
@@ -78,24 +79,24 @@ try {
   await shadow(web, (_, attrs) => attrs.class?.includes('banner'), 'function(){this.querySelector("button").click()}');
   await waitUntil(async () => (await database(app, 'captures'))[0].status === 'queued', 'released batch'); checks.push('end-video-opt-in-batch');
   await app.evaluate(async ({ analysis, id }) => { const d = await new Promise(resolve => { const r = indexedDB.open('mach-doc'); r.onsuccess = () => resolve(r.result); }); const tx = d.transaction('captures', 'readwrite'); const store = tx.objectStore('captures'); const r = store.get(id); r.onsuccess = () => store.put({ ...r.result, status: 'ready', analysis: { ...analysis, transcript: { textEn: r.result.source.exact, uncertain: true, warningVi: 'Cần nghe để xác nhận câu ASR.', changes: [{ original: 'if i had known', corrected: 'If I had known', reasonVi: 'Phục hồi viết hoa.' }] } } }); await new Promise(resolve => tx.oncomplete = resolve); d.close(); }, { analysis, id: captured.id });
-  await app.reload(); const approve = app.getByRole('button', { name: 'Duyệt & đưa vào lịch ôn' }); await approve.waitFor(); assert.equal(await approve.isDisabled(), true);
+  await app.reload(); await openCapture(app); const approve = app.getByRole('button', { name: 'Duyệt & đưa vào lịch ôn' }); await approve.waitFor(); assert.equal(await approve.isDisabled(), true);
   await app.getByLabel('Tôi đã nghe lại và xác nhận câu phục hồi đúng').check(); await waitUntil(() => approve.isEnabled(), 'transcript approval'); await approve.click();
   await app.getByText('Đã tạo / ghép các đơn vị học và lên lịch ôn.').waitFor(); checks.push('uncertain-transcript-approval-gate');
-  await app.getByRole('link', { name: /^Ôn tập/ }).click(); await app.getByRole('button', { name: 'Đổi sang nghe chép chính tả' }).click();
+  await closeCapture(app); await app.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link', { name: /^Ôn tập/ }).click(); await app.getByRole('button', { name: 'Đổi sang nghe chép chính tả' }).click();
   assert.equal(await app.locator('.source-quote').count(), 0); assert.equal(await app.locator('.model-answer').count(), 0);
   await app.getByRole('button', { name: /^▶ Nghe đoạn gốc/ }).click(); const frame = app.locator('iframe[title="Đoạn video gốc để luyện nghe"]'); await frame.waitFor(); assert.ok((await frame.getAttribute('src')).includes('start=5&end=10')); await new Promise(resolve => setTimeout(resolve, 1200)); const embedded = app.frames().find(f => f.url().includes('youtube-nocookie')); assert.equal(await embedded.locator('[data-mach-doc="youtube"]').count(), 0); assert.equal(await embedded.locator('.ytp-caption-window-container').evaluate(e => getComputedStyle(e).visibility), 'hidden');
   await app.getByLabel('Câu trả lời của bạn').fill('If I have known I would helped'); await app.getByRole('button', { name: 'So sánh lời gốc · Không dùng AI' }).click();
   await app.locator('.dictation-diff').waitFor(); assert.equal((await database(app, 'assessments')).length, 1); assert.equal((await database(app, 'reviews')).length, 0);
   await app.screenshot({ path: 'test-results/dictation.png', fullPage: true }); checks.push('dictation-source-audio-and-word-diff', 'assessment-durable-before-rating');
   await app.getByRole('button', { name: /^Chưa nhớ / }).click();
-  await app.getByRole('link', { name: 'Hồ sơ & lộ trình' }).click(); await app.getByRole('heading', { name: 'Bản đồ ngữ pháp' }).waitFor();
+  await closeCapture(app); await app.getByRole('link', { name: 'Hồ sơ & lộ trình' }).click(); await app.getByRole('heading', { name: 'Bản đồ ngữ pháp' }).waitFor();
   await app.screenshot({ path: 'test-results/insights.png', fullPage: true });
   await app.setViewportSize({ width: 760, height: 900 }); await app.screenshot({ path: 'test-results/insights-narrow.png', fullPage: true }); await app.setViewportSize({ width: 1440, height: 1000 }); checks.push('error-profile-grammar-map-frequency-responsive');
   // Source playback uses a real extension message, and resumes the clip on the source page.
   // Playwright cannot intercept the first request of a tab created through chrome.tabs.create.
   // Open that one test tab blank, verify its requested URL, then navigate through the fixture route.
   await worker.evaluate(() => { const create = chrome.tabs.create.bind(chrome.tabs); chrome.tabs.create = properties => { chrome.tabs.create = create; globalThis.requestedClipUrl = properties.url; return create({ ...properties, url: 'about:blank' }); }; });
-  await app.getByRole('link', { name: 'Thư viện ngữ cảnh' }).click(); const pagePromise = context.waitForEvent('page');
+  await closeCapture(app); await app.getByRole('link', { name: 'Thư viện ngữ cảnh' }).click(); await openCapture(app); const pagePromise = context.waitForEvent('page');
   await app.getByRole('button', { name: 'Mở đoạn trên YouTube ↗' }).click(); const opened = await pagePromise;
   const requested = await worker.evaluate(() => globalThis.requestedClipUrl); assert.equal(requested, `https://www.youtube.com/watch?v=${videoId}&t=5s&md-review=1`); await opened.goto(requested);
   await waitUntil(async () => await opened.locator('video').evaluate(v => v.currentTime >= 5.25 && v.currentTime < 11), 'source clip seek');
@@ -140,12 +141,12 @@ try {
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify(result) }] } }], usageMetadata: { totalTokenCount: 140 } }) });
   });
   await app.route('https://api.dictionaryapi.dev/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ phonetic: '/help/', meanings: [{ partOfSpeech: 'verb', definitions: [{ definition: 'To assist someone.', example: 'I can help.' }] }], sourceUrls: ['https://en.wiktionary.org/wiki/help'], license: { name: 'CC BY-SA 3.0' } }]) }));
-  await app.bringToFront(); await app.reload(); await app.getByRole('link', { name: 'Hồ sơ & lộ trình' }).click();
+  await app.bringToFront(); await app.reload(); await closeCapture(app); await app.getByRole('link', { name: 'Hồ sơ & lộ trình' }).click();
   await app.getByRole('button', { name: 'Tạo bài nhắm vào lỗi thường gặp nhất' }).click(); await app.getByLabel('Câu trả lời tiếng Anh').fill('If I have known earlier I would help.');
   await app.getByRole('button', { name: 'Chấm & lưu vào hồ sơ lỗi' }).click(); await app.getByText('Hãy sửa thời điểm giả định trong quá khứ.', { exact: true }).waitFor();
   const assessments = await database(app, 'assessments'); assert.ok(assessments.some(a => a.mode === 'targeted' && a.grade.errors[0].l1NoteVi)); checks.push('targeted-production-strong-model-ui');
   await app.getByRole('button', { name: 'Tạo / tiếp tục tổng hợp tuần trước' }).click(); await app.getByText(/Một thay đổi nhỏ/).waitFor(); assert.equal((await database(app, 'weekly')).length, 1); checks.push('weekly-coverage-ui');
-  await app.getByRole('link', { name: 'Thư viện ngữ cảnh' }).click(); await app.getByText('Kiểm tra nội dung & ưu tiên học', { exact: true }).first().click();
+  await closeCapture(app); await app.getByRole('link', { name: 'Thư viện ngữ cảnh' }).click(); await openCapture(app); await app.getByText('Kiểm tra nội dung & ưu tiên học', { exact: true }).first().click();
   const tools = app.locator('.unit-tools').first(); await tools.getByLabel('Từ / cụm cần đối chiếu từ điển').fill('help'); await tools.getByRole('button', { name: 'Tra nguồn từ điển' }).click(); await tools.getByText('To assist someone.', { exact: false }).waitFor();
   await tools.getByRole('button', { name: 'Giải thích theo cách khác' }).click(); await tools.getByText(/Hãy tưởng tượng quay lại hôm qua/).waitFor();
   await tools.getByLabel('Nội dung sai / điều cần kiểm tra').fill('Cần kiểm tra tên cấu trúc.'); await tools.getByRole('button', { name: 'Lưu báo lỗi & tạm dừng' }).click();

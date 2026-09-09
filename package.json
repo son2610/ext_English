@@ -1,6 +1,6 @@
 {
   "name": "mach-doc",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,9 +8,11 @@
     "dev": "node scripts/build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "node scripts/e2e.mjs && node scripts/e2e-enrichment.mjs && node scripts/e2e-gemini.mjs",
+    "test:e2e": "node scripts/e2e.mjs && node scripts/e2e-enrichment.mjs && node scripts/e2e-gemini.mjs && node scripts/e2e-organization.mjs",
     "test:e2e:enrichment": "node scripts/e2e-enrichment.mjs",
-    "test:e2e:gemini": "node scripts/e2e-gemini.mjs"
+    "test:e2e:gemini": "node scripts/e2e-gemini.mjs",
+    "check:text": "node scripts/check-text.mjs",
+    "test:e2e:organization": "node scripts/e2e-organization.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",

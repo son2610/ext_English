@@ -1,0 +1,19 @@
+﻿{
+    "Name":  "LumaRead — Tiếng Anh từ ngữ cảnh",
+    "Version":  "0.3.0",
+    "Author":  "Blue",
+    "Archives":  [
+                     {
+                         "File":  "lumaread-0.3.0.zip",
+                         "Entries":  34,
+                         "Bytes":  2592188,
+                         "SHA256":  "4C41A488337BA876C78F4F3A16D7B13EABA7607D904FC11A544C1FF48F23216D"
+                     },
+                     {
+                         "File":  "lumaread-store-kit-0.3.0.zip",
+                         "Entries":  12,
+                         "Bytes":  1853737,
+                         "SHA256":  "270EED4E64097B864A13BB1C03CB62DA7C8905A327F694867624220B7AB9EDB0"
+                     }
+                 ]
+}

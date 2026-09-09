@@ -17,7 +17,7 @@ const entries = [
   { entryPoints: { content: 'src/content/index.ts', video: 'src/video/index.ts', 'video-main': 'src/video/main.ts' }, format: 'iife' },
 ];
 for (const entry of entries) {
-  const options = { ...entry, bundle: true, outdir: 'dist', target: 'chrome120', sourcemap: true, minify: !process.argv.includes('--watch'), legalComments: 'eof' };
+  const options = { ...entry, bundle: true, outdir: 'dist', external: ['./fonts/*'], target: 'chrome120', sourcemap: true, minify: !process.argv.includes('--watch'), legalComments: 'eof' };
   if (process.argv.includes('--watch')) await (await context(options)).watch();
   else await build(options);
 }

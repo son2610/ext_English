@@ -1,3 +1,4 @@
+import { openCapture, closeCapture } from './library-test-helpers.mjs';
 import { chromium } from 'playwright';
 import { build } from 'esbuild';
 import { access, mkdir, writeFile } from 'node:fs/promises';
@@ -20,7 +21,7 @@ try {
   const app = await context.newPage(); app.on('pageerror', error => pageErrors.push(error.message));
   const cdp = await context.newCDPSession(app); await cdp.send('Log.enable'); cdp.on('Log.entryAdded', ({ entry }) => { if (/allowfullscreen/i.test(entry.text)) warnings.push(entry.text); });
   await app.goto(`chrome-extension://${new URL(worker.url()).host}/app.html#library`);
-  await app.getByRole('heading', { name: 'Những điều bạn muốn hiểu.' }).waitFor();
+  await app.getByRole('heading', { name: 'Thư viện ngữ cảnh.' }).waitFor();
   await worker.evaluate(async ({ analysis, source }) => {
     await chrome.storage.local.set({ geminiKey: 'fake-gemini-e2e-key' });
     globalThis.aiMode = 'schema'; globalThis.aiCalls = [];
@@ -45,31 +46,31 @@ try {
       await new Promise(resolve => tx.oncomplete = resolve); d.close(); return id;
     }, { source, exact, start });
   }
-  const first = await seed(source.exact, 5.25); await app.reload();
+  const first = await seed(source.exact, 5.25); await app.reload(); await openCapture(app, (await rows(app, 'captures')).some(c => c.source.exact === 'Another sentence.') ? 'Another sentence.' : source.exact);
   await app.getByRole('button', { name: 'Nhờ AI phân tích', exact: true }).click();
   await waitUntil(async () => (await rows(app, 'captures')).find(c => c.id === first)?.status === 'ready');
   const calls = await worker.evaluate(() => globalThis.aiCalls);
   assert.deepEqual(calls.map(c => [c.stage, c.structured]), [['transcript', true], ['transcript', false], ['analysis', true], ['analysis', false]]);
   assert.ok(calls.every(c => c.url.includes('/gemini-3.5-flash:'))); assert.equal((await rows(app, 'units')).length, 0);
-  await app.reload(); await app.getByRole('button', { name: 'Duyệt & đưa vào lịch ôn' }).click();
+  await app.reload(); await openCapture(app, source.exact); await app.getByRole('button', { name: 'Duyệt & đưa vào lịch ôn' }).click();
   await waitUntil(async () => (await rows(app, 'units')).length === 2); checks.push('video-worker-both-stages-schema-fallback', 'same-model-local-validation-explicit-approval');
   await app.getByRole('button', { name: /^▶ Nghe đoạn gốc/ }).click();
   const frame = app.locator('iframe[title="Đoạn video gốc để luyện nghe"]'); await frame.waitFor();
   assert.equal(await frame.evaluate(e => e.hasAttribute('allowfullscreen')), false); assert.equal(await frame.evaluate(e => e.featurePolicy.allowsFeature('fullscreen')), true);
   await app.getByRole('button', { name: 'Đóng trình phát' }).click(); checks.push('fullscreen-permission-without-duplicate-warning');
-  const second = await seed('Another sentence.', 20); await worker.evaluate(() => { globalThis.aiMode = 'auth'; }); await app.reload();
+  const second = await seed('Another sentence.', 20); await worker.evaluate(() => { globalThis.aiMode = 'auth'; }); await app.reload(); await openCapture(app, 'Another sentence.');
   const card = app.locator('.capture-card').filter({ has: app.locator('.source-quote', { hasText: /^Another sentence\.$/ }) });
   await card.getByRole('button', { name: 'Nhờ AI phân tích', exact: true }).click();
   await waitUntil(async () => (await rows(app, 'captures')).find(c => c.id === second)?.status === 'error');
   const failed = (await rows(app, 'captures')).find(c => c.id === second);
   assert.ok(failed.error.includes('Phục hồi phụ đề · gemini-3.5-flash · HTTP 400 INVALID_ARGUMENT')); assert.ok(!failed.error.includes('fake-gemini-e2e-key'));
-  assert.equal((await worker.evaluate(() => globalThis.aiCalls)).length, 5); await app.reload(); await card.locator('.error-text').waitFor();
+  assert.equal((await worker.evaluate(() => globalThis.aiCalls)).length, 5); await app.reload(); await openCapture(app, 'Another sentence.'); await card.locator('.error-text').waitFor();
   await app.screenshot({ path: 'test-results/gemini-error-details.png', fullPage: true }); checks.push('http-400-details-redacted-visible-no-auth-retry');
   await worker.evaluate(() => { globalThis.aiMode = 'success'; });
   await card.getByRole('button', { name: 'Nhờ AI phân tích', exact: true }).click();
   await waitUntil(async () => (await rows(app, 'captures')).find(c => c.id === second)?.status === 'ready');
   assert.equal((await rows(app, 'usage')).length, 7); checks.push('retry-existing-capture-after-error-counts-all-requests');
-  assert.ok((await app.locator('footer').textContent()).includes('0.2.3')); assert.deepEqual(warnings, []); assert.deepEqual(pageErrors, []);
+  assert.ok((await app.locator('footer').textContent()).includes('0.3.0')); assert.deepEqual(warnings, []); assert.deepEqual(pageErrors, []);
   await worker.evaluate(() => chrome.storage.local.remove('geminiKey'));
   await writeFile('test-results/gemini-e2e-report.json', JSON.stringify({ status: 'passed', at: new Date().toISOString(), browser: context.browser()?.version(), profilePath, checks, pageErrors, warnings, note: 'Real extension UI, service worker, IndexedDB; Gemini responses and embedded player are fixtures. No live Gemini request.' }, null, 2));
   console.log(`GEMINI E2E PASS (${checks.length} checks)`);

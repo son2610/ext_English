@@ -42,7 +42,7 @@ export async function editKnowledge(id: string, draft: Knowledge, expectedUpdate
 }
 
 export type LibraryTarget = { kind: 'capture' | 'unit'; id: string; updatedAt: number };
-const stores = ['captures', 'units', 'reviews', 'encounters', 'assessments', 'usage', 'practices', 'weekly', 'dictionary', 'optimization', 'meta', 'backups'] as const;
+const stores = ['captures', 'units', 'reviews', 'encounters', 'assessments', 'usage', 'practices', 'weekly', 'dictionary', 'optimization', 'meta', 'backups', 'organizers'] as const;
 
 /** Snapshot and cascade share one transaction, including reviews arriving from other tabs. */
 export async function deleteLibraryItem(target: LibraryTarget): Promise<void> {
@@ -54,7 +54,8 @@ export async function deleteLibraryItem(target: LibraryTarget): Promise<void> {
     tx.objectStore('assessments').getAll(), tx.objectStore('usage').getAll(), tx.objectStore('practices').getAll(), tx.objectStore('weekly').getAll(),
     tx.objectStore('dictionary').getAll(), tx.objectStore('optimization').getAll(), tx.objectStore('meta').get('settings'),
   ]);
-  const backup: Backup = { format: 'mach-doc', version: 2, exportedAt: Date.now(), settings: SettingsSchema.parse(config?.value ?? defaultSettings), captures, units, reviews, encounters, assessments, usage, practices, weekly, dictionary, optimization };
+  const organizers = await tx.objectStore('organizers').getAll();
+  const backup: Backup = { format: 'mach-doc', version: 3, exportedAt: Date.now(), settings: SettingsSchema.parse(config?.value ?? defaultSettings), captures, units, reviews, encounters, assessments, usage, practices, weekly, dictionary, optimization, organizers };
   await tx.objectStore('backups').put({ id: crypto.randomUUID(), at: backup.exportedAt, json: JSON.stringify(backup) });
   const snapshots = (await tx.objectStore('backups').getAll()).sort((a, b) => b.at - a.at);
   for (const old of snapshots.slice(5)) await tx.objectStore('backups').delete(old.id);

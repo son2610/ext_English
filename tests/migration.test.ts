@@ -12,7 +12,7 @@ it('upgrades a real version 1 database in place, retaining captures and settings
   const capture = { id: crypto.randomUUID(), source, note: 'Ghi chú cũ cần giữ', status: 'saved', attempts: 0, nextAttemptAt: 0, leaseUntil: 0, updatedAt: 1, unitsCreated: false };
   await old.put('captures', capture); await old.put('meta', { key: 'settings', value: { model: 'my-old-model', retention: 0.92 } }); old.close();
   const { db } = await import('../src/data/db'); const upgraded = await db;
-  expect(upgraded.version).toBe(2); expect(await upgraded.get('captures', capture.id)).toEqual(capture);
+  expect(upgraded.version).toBe(3); expect(await upgraded.get('captures', capture.id)).toEqual(capture);
   expect(upgraded.transaction('captures').store.indexNames.contains('videoId')).toBe(true);
   expect(upgraded.objectStoreNames.contains('assessments')).toBe(true);
   const { settings } = await import('../src/data/repository'); const config = await settings();

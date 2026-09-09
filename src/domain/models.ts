@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { VideoSourceSchema, TranscriptRepairSchema } from './video';
 import { errorCategories } from './error-categories';
+import { OrganizationSchema } from './organization';
 
 const text = z.string().min(1).max(8000);
 const short = z.string().min(1).max(500);
@@ -41,6 +42,7 @@ export const SourceSchema = z.object({
 });
 export type Source = z.infer<typeof SourceSchema>;
 export const CaptureSchema = z.object({
+  organization: OrganizationSchema.optional(),
   id: z.string().uuid(), source: SourceSchema, note: z.string().max(8000),
   status: z.enum(['saved', 'queued', 'processing', 'ready', 'error']),
   analysis: AnalysisSchema.optional(), error: z.string().max(2000).optional(),

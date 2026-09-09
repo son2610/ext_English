@@ -1,9 +1,11 @@
 import { openDB, type DBSchema } from 'idb';
 import type { Capture, Unit, Review, Settings } from '../domain/models';
+import type { Organizer } from '../domain/organization';
 import type { Assessment, Usage, Practice, Weekly, DictionaryEntry, Optimization } from '../domain/enrichment';
 export interface Encounter { id: string; unitId: string; day: string; page: string; at: number }
 export interface CacheEntry { key: string; value: unknown; at: number }
 interface Database extends DBSchema {
+  organizers: { key: string; value: Organizer };
   captures: { key: string; value: Capture; indexes: { status: string; videoId: string } };
   units: { key: string; value: Unit; indexes: { canonical: string; due: number } };
   reviews: { key: string; value: Review; indexes: { at: number; unitId: string } };
@@ -18,8 +20,9 @@ interface Database extends DBSchema {
   dictionary: { key: string; value: DictionaryEntry };
   optimization: { key: string; value: Optimization };
 }
-export const db = openDB<Database>('mach-doc', 2, {
+export const db = openDB<Database>('mach-doc', 3, {
   upgrade(database, oldVersion, _newVersion, transaction) {
+    if (oldVersion < 3) database.createObjectStore('organizers', { keyPath: 'id' });
     if (oldVersion < 1) {
     database.createObjectStore('captures', { keyPath: 'id' }).createIndex('status', 'status');
     const units = database.createObjectStore('units', { keyPath: 'id' });

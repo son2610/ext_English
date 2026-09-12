@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LumaRead — Tiếng Anh từ ngữ cảnh",
   "description": "Biến câu tiếng Anh trên web và YouTube thành bài học: giải thích AI bằng tiếng Việt, nhãn màu, luyện viết và ôn đúng hạn.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "minimum_chrome_version": "120",
   "permissions": [
     "storage",
@@ -98,7 +98,7 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https://generativelanguage.googleapis.com https://api.dictionaryapi.dev https://www.youtube.com https://youtube.com; frame-src https://www.youtube-nocookie.com; base-uri 'none'"
+    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com; base-uri 'none'"
   },
   "web_accessible_resources": [
     {
@@ -117,5 +117,8 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "author": "Blue"
+  "author": "Blue",
+  "optional_host_permissions": [
+    "https://*/*"
+  ]
 }

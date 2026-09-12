@@ -181,6 +181,21 @@
       "tokens": {
         "type": "number",
         "minimum": 0
+      },
+      "provider": {
+        "type": "string",
+        "maxLength": 40
+      },
+      "connectionId": {
+        "type": "string",
+        "maxLength": 80
+      },
+      "fallback": {
+        "type": "boolean"
+      },
+      "errorCode": {
+        "type": "string",
+        "maxLength": 40
       }
     },
     "required": [

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AIConfigurationSchema } from './ai-config';
 import { VideoSourceSchema, TranscriptRepairSchema } from './video';
 import { errorCategories } from './error-categories';
 import { OrganizationSchema } from './organization';
@@ -81,6 +82,7 @@ export const ReviewSchema = z.object({
 });
 export type Review = z.infer<typeof ReviewSchema>;
 export const SettingsSchema = z.object({
+  ai: AIConfigurationSchema.optional(),
   model: z.string().regex(/^[a-zA-Z0-9._-]+$/).max(100).default('gemini-3.5-flash'),
   retention: z.number().min(0.8).max(0.97).default(0.9),
   highlighting: z.boolean().default(false),

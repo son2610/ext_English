@@ -12,6 +12,8 @@ export const UsageSchema = z.object({
   id: z.string().uuid(), at: z.number().nonnegative(), day: z.string(), month: z.string(),
   model: z.string().max(100), task: z.enum(['analysis', 'transcript', 'grading', 'explanation', 'targeted', 'weekly']),
   status: z.enum(['started', 'success', 'failed']), tokens: z.number().nonnegative(),
+  provider: z.string().max(40).optional(), connectionId: z.string().max(80).optional(),
+  fallback: z.boolean().optional(), errorCode: z.string().max(40).optional(),
 });
 export type Usage = z.infer<typeof UsageSchema>;
 export const DrillSchema = z.object({

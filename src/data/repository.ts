@@ -8,6 +8,12 @@ export async function settings(): Promise<Settings> {
 export async function saveSettings(value: Settings): Promise<void> {
   await (await db).put('meta', { key: 'settings', value: SettingsSchema.parse(value) });
 }
+/** General settings and provider settings are saved independently in the UI. */
+export async function saveGeneralSettings(value: Settings): Promise<void> {
+  const tx = (await db).transaction('meta', 'readwrite');
+  const current = SettingsSchema.parse((await tx.store.get('settings'))?.value ?? {});
+  await tx.store.put({ key: 'settings', value: SettingsSchema.parse({ ...value, ai: current.ai }) }); await tx.done;
+}
 export async function allData() {
   const database = await db;
   const tx = database.transaction(['captures', 'units', 'reviews'], 'readonly');

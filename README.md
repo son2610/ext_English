@@ -1,6 +1,9 @@
 # LumaRead — Tiếng Anh từ ngữ cảnh
 
-Chrome Extension học tiếng Anh từ bài đọc và video YouTube, trước đây là Mạch Đọc. Bản **0.3.0** có thư viện thẻ gọn, nhóm và nhãn màu, tìm kiếm không dấu, lọc tiến độ, thao tác hàng loạt và phân trang 24 câu. Font Noto Sans tiếng Việt được đóng gói cùng icon mới; tên nhà phát hành **Blue**. TypeScript strict, MV3, React, IndexedDB, FSRS. Không có backend riêng; Gemini, từ điển và video gốc cần mạng.
+Chrome Extension học tiếng Anh từ bài đọc và video YouTube, trước đây là Mạch Đọc. Bản **0.4.0** thêm nhiều nhà cung cấp AI và tự chuyển dự phòng khi lỗi, giữ thư viện thẻ gọn, nhóm và nhãn màu, tìm kiếm không dấu, lọc tiến độ, thao tác hàng loạt và phân trang 24 câu. Font Noto Sans tiếng Việt được đóng gói cùng icon mới; tên nhà phát hành **Blue**. TypeScript strict, MV3, React, IndexedDB, FSRS. Không có backend riêng; AI, từ điển và video gốc cần mạng.
+
+**Cấu hình mới:** giữ Gemini đang dùng → thêm DeepSeek → nhập khóa/model → bật tự dự phòng → Lưu cấu hình AI → Kiểm tra JSON. Xem [hướng dẫn, quy tắc chuyển và hợp đồng dữ liệu](docs/AI-PROVIDERS.vi.md). Khóa riêng từng nhà cung cấp, không có trong export; mọi lần thử tính chung vào hạn mức.
+
 
 - [Cách dùng và thiết kế thư viện 0.3](docs/LIBRARY-0.3.vi.md)
 - [Bộ nội dung/ảnh Chrome Web Store](artifacts/store/LISTING.vi.md)
@@ -20,7 +23,7 @@ Bản 0.2.2 bỏ khai báo toàn màn hình trùng trong iframe YouTube, sửa c
 
 1. Mở `chrome://extensions`, bật **Chế độ dành cho nhà phát triển**.
 2. Chọn **Tải tiện ích đã giải nén / Load unpacked**, trỏ tới `D:\project code\gg_ext_english\dist`.
-3. Mở tab mới hoặc `Alt+Shift+R`. Vào **Cài đặt & dữ liệu** để nhập API key Gemini nếu muốn dùng AI. Trên YouTube, icon toolbar ưu tiên lưu câu đang nghe.
+3. Mở tab mới hoặc `Alt+Shift+R`. Vào **Cài đặt & dữ liệu** → **Nhà cung cấp AI & dự phòng** để nhập khóa Gemini, DeepSeek, OpenAI hoặc GLM nếu muốn dùng AI. Trên YouTube, icon toolbar ưu tiên lưu câu đang nghe.
 4. Tải lại những trang web đã mở trước khi cài extension.
 
 Chrome 120 trở lên. Dùng Chromium/Chrome trên desktop. Extension không được chạy trên `chrome://`, Chrome Web Store, trang của extension khác và một số trình xem PDF. Không hỗ trợ chọn chữ trong ảnh/canvas, editor đặc biệt hoặc closed Shadow DOM. Không có cách hợp lệ để bảo đảm hoạt động trên *mọi* trang.
@@ -73,7 +76,7 @@ Nếu npm trên Windows bị lỗi `EPERM` khi resolve đường dẫn cài đ�
 node --preserve-symlinks-main 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --cache .npm-cache
 ```
 
-`npm test` có 64 kiểm thử dữ liệu, phụ đề/timing, lỗi/quota, nâng cấp DB v1/v2→v3, nhóm/nhãn và kiểm định tham số. `npm run test:e2e` chạy bốn bộ: luồng đọc, YouTube/hồ sơ, tương thích Gemini, thư viện 5.000 câu và font tiếng Việt. `npm run check:text` kiểm tra UTF-8, manifest và kích thước icon. YouTube được mô phỏng bằng native media/TextTrack; Gemini và từ điển có response giả lập. `node scripts/performance.mjs` kiểm tra riêng 3.000 unit đánh dấu trên trang dài với CPU throttle. Kết quả/screenshot nằm trong `test-results/`; không dùng key thật.
+`npm test` có 101 kiểm thử dữ liệu, phụ đề/timing, lỗi/quota, nâng cấp DB v1/v2→v3, nhóm/nhãn và kiểm định tham số. `npm run test:e2e` chạy năm bộ: luồng đọc, YouTube/hồ sơ, tương thích Gemini, nhiều nhà cung cấp/dự phòng, thư viện 5.000 câu và font tiếng Việt. `npm run check:text` kiểm tra UTF-8, manifest và kích thước icon. YouTube được mô phỏng bằng native media/TextTrack; AI và từ điển có response giả lập; E2E dự phòng mô phỏng xác nhận quyền host của Chrome headless. `node scripts/performance.mjs` kiểm tra riêng 3.000 unit đánh dấu trên trang dài với CPU throttle. Kết quả/screenshot nằm trong `test-results/`; không dùng key thật.
 
 ## Kiến trúc & dữ liệu
 
@@ -86,7 +89,7 @@ node --preserve-symlinks-main 'C:\Program Files\nodejs\node_modules\npm\bin\npm-
 ```text
 src/domain/       Kiến thức, review, schema runtime, giao diện Scheduler + adapter FSRS
 src/data/         IndexedDB, transaction, queue lease, export/import/snapshot
-src/ai/           AIProvider + adapter Gemini, schema, hash cache, phân loại lỗi
+src/ai/           LearningProvider + router dự phòng + adapter Gemini/Chat Completions, kiểm tra schema, cache, quota
 src/background/   MV3 messages/alarms/badge/jobs, offscreen Blob cho backup
 src/content/      Selection, Shadow DOM capture, matcher và highlight tùy chọn
 src/video/        Caption adapters, timeline/note, editor và rewatch YouTube
@@ -99,6 +102,6 @@ scripts/          Build, schema và Chromium E2E
 
 Export JSON có version và chứa dữ liệu học đầy đủ, bao gồm câu trả lời và phản hồi AI. API key và cache có thể tái tạo được không xuất. Import kiểm tra toàn bộ trước khi ghi và ghép trong transaction: ID đã có giữ nguyên toàn bộ mục và lịch sử gắn với mục đó, tránh khôi phục bản cũ làm lùi tiến độ. Đây là **nhập bảo toàn**, chưa phải đồng bộ/giải quyết xung đột hai thiết bị. Khôi phục vào hồ sơ trống giữ nguyên dữ liệu học và cài đặt.
 
-Khóa Gemini lưu trong `chrome.storage.local` chỉ cho trusted contexts; không mã hóa trước người có quyền đọc hồ sơ máy. Không gửi URL, tiêu đề trang, vị trí cuộn, API key cho mô hình: request phân tích chỉ chứa đoạn trích, ngữ cảnh, heading và ghi chú. Hãy lưu nội dung riêng tư ở chế độ không AI nếu không muốn gửi cho Google. Xem [tài liệu API key của Google](https://ai.google.dev/gemini-api/docs/api-key).
+Các khóa AI lưu trong `chrome.storage.local` chỉ cho trusted contexts; không mã hóa trước người có quyền đọc hồ sơ máy. Không gửi URL, tiêu đề trang, vị trí cuộn, API key cho mô hình: request phân tích chỉ chứa đoạn trích, ngữ cảnh, heading và ghi chú. Hãy lưu nội dung riêng tư ở chế độ không AI nếu không muốn gửi cho các nhà cung cấp đã cấu hình (kể cả dự phòng nếu bật). Xem [tài liệu API key của Google](https://ai.google.dev/gemini-api/docs/api-key).
 
 Đây là bản cá nhân có kiểm thử. Timestamp phụ đề quan sát là ước lượng; bảng A1–C2 chưa được thẩm định CEFR; hiệu chỉnh FSRS hiện thử 6/21 tham số, có validation và hoàn tác. Chưa chứng minh chất lượng chấm với key thật, mọi biến thể YouTube hoặc hiệu năng trên mọi máy. Chi tiết các phần còn hoãn nằm trong thiết kế bản mở rộng.

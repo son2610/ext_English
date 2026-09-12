@@ -1,7 +1,7 @@
 import { openCapture, closeCapture } from './library-test-helpers.mjs';
 import { chromium } from 'playwright';
 import { build } from 'esbuild';
-import { access, mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
 
@@ -70,7 +70,7 @@ try {
   await card.getByRole('button', { name: 'Nhờ AI phân tích', exact: true }).click();
   await waitUntil(async () => (await rows(app, 'captures')).find(c => c.id === second)?.status === 'ready');
   assert.equal((await rows(app, 'usage')).length, 7); checks.push('retry-existing-capture-after-error-counts-all-requests');
-  assert.ok((await app.locator('footer').textContent()).includes('0.3.0')); assert.deepEqual(warnings, []); assert.deepEqual(pageErrors, []);
+  assert.ok((await app.locator('footer').textContent()).includes(JSON.parse(await readFile('package.json', 'utf8')).version)); assert.deepEqual(warnings, []); assert.deepEqual(pageErrors, []);
   await worker.evaluate(() => chrome.storage.local.remove('geminiKey'));
   await writeFile('test-results/gemini-e2e-report.json', JSON.stringify({ status: 'passed', at: new Date().toISOString(), browser: context.browser()?.version(), profilePath, checks, pageErrors, warnings, note: 'Real extension UI, service worker, IndexedDB; Gemini responses and embedded player are fixtures. No live Gemini request.' }, null, 2));
   console.log(`GEMINI E2E PASS (${checks.length} checks)`);

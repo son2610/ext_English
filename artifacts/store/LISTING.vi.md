@@ -1,4 +1,4 @@
-# Nội dung Chrome Web Store — LumaRead 0.3.0
+# Nội dung Chrome Web Store — LumaRead 0.4.0
 
 **Tên tiện ích:** LumaRead — Tiếng Anh từ ngữ cảnh
 
@@ -23,7 +23,8 @@ LumaRead giúp bạn giữ lại câu ấy, hiểu nó trong đúng ngữ cảnh
 • Lưu nhanh bằng phím tắt, rồi phân tích sau để giữ mạch đọc.
 
 HIỂU CÂU, HIỂU CẢ CÁCH DÙNG
-• Dùng Google Gemini với API key của chính bạn để giải thích nghĩa và ngữ pháp bằng tiếng Việt.
+• Dùng Gemini, DeepSeek, OpenAI hoặc GLM với API key của chính bạn để giải thích nghĩa và ngữ pháp bằng tiếng Việt.
+• Sắp xếp model chính/dự phòng; tự chuyển khi AI lỗi hoặc trả dữ liệu không hợp lệ. Hỗ trợ thêm API tương thích OpenAI.
 • Tách câu thành các đơn vị học độc lập: cấu trúc, cụm từ, câu điền khuyết.
 • Đọc ví dụ mới, đối chiếu phụ đề tự động, duyệt nội dung trước khi đưa vào lịch ôn.
 
@@ -47,8 +48,8 @@ DỮ LIỆU HỌC DO BẠN GIỮ
 ĐIỀU CẦN BIẾT TRƯỚC KHI CÀI
 • Phần tích hợp Gemini dành cho người từ 18 tuổi, học và đọc tiếng Anh phục vụ công việc; áp dụng điều kiện khu vực và điều khoản của Google.
 • Tiện ích thay trang tab mới bằng góc học và dùng biểu tượng thanh công cụ để mở góc học/lưu câu YouTube.
-• Lưu câu, quản lý thư viện và ôn từ ghi chú không cần API key. Tính năng AI cần mạng và API key Gemini riêng; hạn mức hoặc phí phụ thuộc tài khoản Google của bạn.
-• Khi bạn yêu cầu AI, nội dung liên quan tới bài học được gửi trực tiếp đến Google. Tính năng luyện lỗi tự động có thể tắt trong Cài đặt. Tra từ điển và phát video gốc dùng dịch vụ bên ngoài.
+• Lưu câu, quản lý thư viện và ôn từ ghi chú không cần API key. Tính năng AI cần mạng và API key riêng của nhà cung cấp; hạn mức hoặc phí phụ thuộc tài khoản AI của bạn.
+• Khi bạn yêu cầu AI, nội dung liên quan tới bài học được gửi trực tiếp đến nhà cung cấp bạn cấu hình, kể cả các nhà cung cấp dự phòng nếu bật và cần chuyển. Tính năng luyện lỗi tự động có thể tắt trong Cài đặt. Tra từ điển và phát video gốc dùng dịch vụ bên ngoài.
 • Chrome không cho tiện ích hoạt động trên một số trang được bảo vệ, như chrome:// và Chrome Web Store. Khả năng lấy phụ đề phụ thuộc video và giao diện YouTube.
 • Đánh dấu lại cụm từ khi duyệt web là tính năng tuỳ chọn, mặc định tắt.
 
@@ -58,7 +59,7 @@ Hỗ trợ: Blue — phamhongson5151@gmail.com
 
 | Mục | File |
 | --- | --- |
-| Gói extension | `../lumaread-0.3.0.zip` |
+| Gói extension | `../lumaread-0.4.0.zip` |
 | Icon Store 128 × 128, nền ngoài trong suốt | `icon-128.png` |
 | Ảnh quảng bá nhỏ 440 × 280 | `promo-440x280.png` |
 | Ảnh quảng bá rộng 1400 × 560 | `marquee-1400x560.png` |
@@ -83,12 +84,13 @@ Giải trình quyền theo hành vi hiện tại:
 | `activeTab` | Thao tác người dùng bấm icon/phím tắt trên tab hiện tại, điều hướng lưu và ôn. |
 | `offscreen`, `downloads` | Tạo file JSON sao lưu từ service worker và lưu bằng Chrome Downloads. |
 | Content scripts trên HTTP/HTTPS, gồm iframe | Lấy vùng chọn và ngữ cảnh khi người dùng yêu cầu; đánh dấu cụm đã học nếu bật. Không hoạt động như bộ thu thập toàn bộ lịch sử duyệt web. |
-| Google Gemini endpoint | Gửi yêu cầu AI trực tiếp với key người dùng. |
+| Google Gemini endpoint | Giữ kết nối Gemini trực tiếp với key người dùng. |
+| `optional_host_permissions: https://*/*` | Cho phép thêm nhà cung cấp AI mới, gồm API tương thích OpenAI tùy chỉnh. Chỉ xin cấp origin HTTPS cụ thể của các kết nối đã chọn khi lưu cấu hình; kiểm tra quyền trước khi gửi. |
 | Dictionary API | Tra từ/cụm người dùng yêu cầu, kèm nguồn. |
 | YouTube timedtext và content scripts YouTube | Đọc phụ đề, lưu/định vị đoạn và điều khiển phát lặp. |
 | New tab override | Đưa góc học và bài đến hạn vào mỗi tab mới. |
 
-Khai báo dữ liệu cần phản ánh cả dữ liệu xử lý tại máy: nội dung website được chọn và ngữ cảnh lân cận, URL/tiêu đề/mốc video của câu đã lưu, ghi chú, nội dung trả lời, tiến độ, cấu hình và khóa API người dùng. Key được dùng để xác thực với Google và không nằm trong export/backup. Thông tin về nội dung gửi ra ngoài xem chính sách riêng tư. Không khai báo “không xử lý dữ liệu người dùng” chỉ vì không có backend riêng.
+Khai báo dữ liệu cần phản ánh cả dữ liệu xử lý tại máy: nội dung website được chọn và ngữ cảnh lân cận, URL/tiêu đề/mốc video của câu đã lưu, ghi chú, nội dung trả lời, tiến độ, cấu hình và khóa API người dùng. Key được dùng để xác thực với đúng nhà cung cấp đã cấu hình và không nằm trong export/backup. Thông tin về nội dung gửi ra ngoài xem chính sách riêng tư. Không khai báo “không xử lý dữ liệu người dùng” chỉ vì không có backend riêng.
 
 Trước khi gửi duyệt: đưa `privacy.html` lên một URL HTTPS công khai do Blue quản lý rồi điền URL đó trong Dashboard; chọn tên hiển thị nhà phát hành Blue trong tài khoản phát hành. Bản này chưa được gửi hoặc đăng lên Store. Nếu chuyển từ bản Load unpacked sang bản Store có ID khác, xuất dữ liệu ở bản cũ và nhập vào bản Store; Chrome không tự chia sẻ IndexedDB giữa hai ID.
 

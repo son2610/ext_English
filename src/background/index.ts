@@ -2,7 +2,8 @@ import { ContentMessageSchema, type Reply } from '../shared/messages';
 import { capture, claimJob, completeJob, encounter, settings } from '../data/repository';
 import { db } from '../data/db';
 import { snapshot } from '../data/backup';
-import { GeminiProvider, AIError } from '../ai/provider';
+import { AIError } from '../ai/provider';
+import { getProvider, hasConfiguredProvider } from '../ai/factory';
 import { z } from 'zod';
 import { videoMessage, openVideoClip } from './video';
 import { expandInflections } from '../learning/inflections';
@@ -16,13 +17,11 @@ async function pump() {
   pumping = true;
   try {
     await secureStorage;
-    const config = await settings();
-    const keyResult = await chrome.storage.local.get('geminiKey');
-    if (typeof keyResult.geminiKey !== 'string' || !keyResult.geminiKey) return;
+    if (!await hasConfiguredProvider()) return;
     const job = await claimJob();
     if (!job) return;
     try {
-      const provider = new GeminiProvider(keyResult.geminiKey, config.model, config.strongModel);
+      const provider = await getProvider();
       await completeJob(job, await provider.analyze(job.source, job.note));
     } catch (error) {
       const retryable = error instanceof AIError && error.retryable && job.attempts < 4;

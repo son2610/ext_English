@@ -1,5 +1,8 @@
 # Thiết kế nền tảng MVP Mạch Đọc
 
+**Cập nhật 0.4.0:** AI đa nhà cung cấp và dự phòng áp dụng cho mọi tác vụ; xem [thiết kế hiện tại](AI-PROVIDERS.vi.md). `Settings.ai?` lưu danh sách/thứ tự/model, không chứa khóa; `Usage` có provider/connectionId/fallback/errorCode tùy chọn. Giữ IDB v3, backup v3, hợp đồng Analysis/Grade và lịch FSRS. Mô tả chỉ Gemini bên dưới thuộc kiến trúc trước 0.4.0.
+
+
 **Tài liệu lịch sử của bản 0.1.0.** Các phần về YouTube, hồ sơ lỗi, morphology, schema mới, model theo tác vụ và hiệu chỉnh FSRS đã được bổ sung trong [thiết kế bản 0.2.0](EXTENSIONS.vi.md). Khi có khác biệt về trạng thái tính năng, dùng tài liệu 0.2.0.
 
 ## Phạm vi và những điều không thể hứa

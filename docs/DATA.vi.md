@@ -1,5 +1,8 @@
 # Hợp đồng dữ liệu
 
+**Cập nhật 0.4.0:** AI đa nhà cung cấp và dự phòng áp dụng cho mọi tác vụ; xem [thiết kế hiện tại](AI-PROVIDERS.vi.md). `Settings.ai?` lưu danh sách/thứ tự/model, không chứa khóa; `Usage` có provider/connectionId/fallback/errorCode tùy chọn. Giữ IDB v3, backup v3, hợp đồng Analysis/Grade và lịch FSRS. Mô tả chỉ Gemini bên dưới thuộc kiến trúc trước 0.4.0.
+
+
 **Bản 0.3.0:** IndexedDB v3 thêm store `organizers`; export JSON v3 thêm mảng danh mục và `Capture.organization? = { groupId?, labelIds }`. Nhập được backup v1/v2. IDB, định danh backup `mach-doc` và lịch FSRS được giữ khi đổi tên thành LumaRead. Xem [hợp đồng nhóm/nhãn và thiết kế thư viện](LIBRARY-0.3.vi.md). Những mô tả v1/v2 bên dưới là lịch sử của các phần dữ liệu đã có.
 
 Nguồn TypeScript + Zod: [`src/domain/models.ts`](../src/domain/models.ts). JSON Schema phát sinh bằng `node scripts/schema.mjs`; không sửa file generated bằng tay.

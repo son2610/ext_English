@@ -1,7 +1,7 @@
 import { db } from '../data/db';
 import { allData, settings } from '../data/repository';
 import { saveWeekly, savePractice } from '../data/enrichment';
-import { getProvider } from '../ai/factory';
+import { getProvider, hasConfiguredProvider } from '../ai/factory';
 import { OptimizationSchema } from '../domain/enrichment';
 import type { Calibration } from './optimizer';
 import { SettingsSchema, type Review } from '../domain/models';
@@ -33,7 +33,7 @@ export async function prepareTargeted() {
     const top = errorProfile(await database.getAll('assessments'))[0];
     if (!top || top.recent < 3) return;
     const unit = (await database.getAll('units')).find(u => top.units.has(u.id) && !u.reportedIssue);
-    const key = await chrome.storage.local.get('geminiKey'); if (!unit || !key.geminiKey) return;
+    if (!unit || !await hasConfiguredProvider()) return;
     await savePractice(unit.id, await (await getProvider()).targeted(unit.knowledge, top.examples), unit.updatedAt);
   });
 }

@@ -2,15 +2,16 @@ import { z } from 'zod';
 import type { Usage } from '../domain/enrichment';
 
 export class AIError extends Error {
-  constructor(message: string, public retryable: boolean, public retryAfterMs = 0, public schemaRejected = false) { super(message); }
+  constructor(message: string, public retryable: boolean, public retryAfterMs = 0, public schemaRejected = false,
+    public code = 'provider', public fallbackAllowed = true) { super(message); this.name = 'AIError'; }
 }
-const stages: Record<Usage['task'], string> = { analysis: 'Phân tích ngữ pháp', transcript: 'Phục hồi phụ đề', grading: 'Chấm bài', explanation: 'Giải thích lại', targeted: 'Tạo bài luyện', weekly: 'Tổng hợp tuần' };
+export const stages: Record<Usage['task'], string> = { analysis: 'Phân tích ngữ pháp', transcript: 'Phục hồi phụ đề', grading: 'Chấm bài', explanation: 'Giải thích lại', targeted: 'Tạo bài luyện', weekly: 'Tổng hợp tuần' };
 const errorSchema = z.object({ error: z.object({
   message: z.string().optional(), status: z.string().optional(),
   details: z.array(z.object({ reason: z.string().optional(), fieldViolations: z.array(z.object({ field: z.string().optional(), description: z.string().optional() })).optional() })).optional(),
 }) });
 
-function redact(text: string, key: string): string {
+export function redact(text: string, key: string): string {
   let safe = text;
   for (const secret of [key, key.trim(), encodeURIComponent(key.trim())].filter(Boolean)) safe = safe.split(secret).join('[đã ẩn khoá]');
   return safe.replace(/AIza[\w-]{20,}/g, '[đã ẩn khoá]').replace(/([?&](?:key|api_key)=)[^\s&"']+/gi, '$1[đã ẩn khoá]').replace(/[\u0000-\u001f\u007f]/g, ' ').trim();

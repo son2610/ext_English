@@ -30,18 +30,18 @@ export async function backfillAssessments() {
 }
 export function localDay(at = Date.now()) { const d = new Date(at); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 export class BudgetError extends Error {}
-export async function reserveUsage(model: string, task: Usage['task']): Promise<string> {
+export async function reserveUsage(model: string, task: Usage['task'], route: Pick<Usage, 'provider' | 'connectionId' | 'fallback'> = {}): Promise<string> {
   const config = await settings(); const day = localDay(); const month = day.slice(0, 7);
   const tx = (await db).transaction('usage', 'readwrite');
   const daily = await tx.store.index('day').count(day); const monthly = await tx.store.index('month').count(month);
   if (daily >= config.dailyApiLimit || monthly >= config.monthlyApiLimit) { await tx.done; throw new BudgetError('Đã đạt hạn mức gọi AI bạn đặt. Tăng hạn mức trong Cài đặt hoặc chờ kỳ tiếp theo; bài đã lưu vẫn còn.'); }
   const id = crypto.randomUUID();
-  await tx.store.add({ id, at: Date.now(), day, month, model, task, status: 'started', tokens: 0 }); await tx.done;
+  await tx.store.add({ id, at: Date.now(), day, month, model, task, status: 'started', tokens: 0, ...route }); await tx.done;
   return id;
 }
-export async function finishUsage(id: string, status: 'success' | 'failed', tokens = 0) {
+export async function finishUsage(id: string, status: 'success' | 'failed', tokens = 0, errorCode?: string) {
   const tx = (await db).transaction('usage', 'readwrite'); const item = await tx.store.get(id);
-  if (item) await tx.store.put({ ...item, status, tokens: Number.isFinite(tokens) ? Math.max(0, tokens) : 0 }); await tx.done;
+  if (item) await tx.store.put({ ...item, status, tokens: Number.isFinite(tokens) ? Math.max(0, tokens) : 0, ...(errorCode ? { errorCode } : {}) }); await tx.done;
 }
 export async function savePractice(unitId: string, drill: Omit<Practice, 'id' | 'unitId' | 'createdAt'>, expectedUpdatedAt?: number): Promise<Practice> {
   const practice: Practice = { ...drill, id: crypto.randomUUID(), unitId, createdAt: Date.now() };

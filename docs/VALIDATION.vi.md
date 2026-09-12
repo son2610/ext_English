@@ -1,4 +1,19 @@
-# Nghiệm thu bản 0.3.0 — LumaRead
+# Nghiệm thu bản 0.4.0 — LumaRead
+
+Kiểm tra ngày **12/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55**, hồ sơ thử riêng. TypeScript strict, build và kiểm tra UTF-8 của **60 file** đạt. **101/101 kiểm thử unit** đạt, gồm **37 kiểm thử mới** cho đa nhà cung cấp, JSON, lỗi, quota, khóa và cấu hình.
+
+- Gemini gặp HTTP 400/401/402/403/404/408/429/500/503 hoặc lỗi mạng → DeepSeek đúng thứ tự, đúng header/khóa.
+- JSON thiếu/sai, vượt giới hạn, rỗng, bị cắt, evidence/cloze/weekly coverage sai → loại kết quả; không làm thay đổi bài học. Kiểm tra OpenAI strict schema, nullable tùy chọn; GLM/custom URL; model riêng theo tác vụ; giữ phụ đề đã sửa khi chuyển AI ở bước ngữ pháp.
+- Bật/tắt dự phòng, cooldown qua các client, `Retry-After`, deadline, hạn mức chung, dừng khi nhà cung cấp từ chối nội dung, ẩn khóa trong lỗi và export/import cấu hình.
+- Giữ khóa/model Gemini cũ; đổi endpoint không nhận nhầm khóa cũ; xóa khóa/kết nối; từ chối quyền host giữ cấu hình trước đó; lưu cài đặt chung không ghi đè danh sách AI.
+
+Năm bộ E2E đạt: [luồng đọc](../test-results/e2e-report.json) **14 kiểm tra**, [YouTube/học bổ sung](../test-results/enrichment-e2e-report.json) **26**, [Gemini](../test-results/gemini-e2e-report.json) **5**, [thư viện](../test-results/organization-e2e-report.json) **10**, [AI dự phòng](../test-results/ai-fallback-e2e-report.json) **11**. Bộ mới dùng UI, worker và IndexedDB thật: nhập từng ký tự vào ô khóa không làm đóng thẻ; giữ cấu hình qua reload, thử JSON đúng kết nối, Gemini 503 → DeepSeek cho hai bước YouTube, chỉ tạo bài sau duyệt, dữ liệu sai không ghi đè thư viện, hiển thị provider thực tế và xuất cấu hình không có khóa. [Ảnh cài đặt](../test-results/ai-settings-desktop.png), [màn hình hẹp](../test-results/ai-settings-mobile.png).
+
+**Giới hạn phép thử:** các API là response giả lập, chưa gọi model bằng khóa thật của người dùng. Chrome headless không điều khiển được hộp thoại cấp quyền host ngoài trang, nên riêng bộ AI dự phòng mô phỏng chấp nhận quyền và kiểm tra chính xác các origin yêu cầu; trường hợp từ chối được kiểm tra ở unit test. Chưa kiểm thử riêng Chrome 120 hoặc toàn bộ model của từng hãng. Nút Kiểm tra JSON trong app dành cho tài khoản/model thực tế.
+
+Kiểm tra thư viện 5.000 câu vẫn chỉ dựng **24 thẻ**, không có iframe/chi tiết ẩn. Lượt đo CPU 4× hiện tại: tải **6.411 ms**, tìm **691 ms**, mở chi tiết **733 ms**, gồm thao tác Playwright; thời gian phụ thuộc tải máy và không tương đương điều kiện của phép đo 0.3 bên dưới. Noto Sans vẫn cung cấp đủ **334 glyph** Việt NFC/NFD, không có font thay thế hoặc lỗi trang. Bản này chưa được gửi lên Chrome Web Store.
+
+## Lịch sử nghiệm thu 0.3.0
 
 Kiểm tra ngày **08/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55** headless, profile riêng. TypeScript strict, build và kiểm tra UTF-8 đều đạt. **64/64 unit tests** đạt, gồm 7 kiểm thử nhóm/nhãn và nâng cấp thực tế DB v1/v2 lên v3. Bốn bộ E2E đều đạt; Gemini/YouTube dùng phản hồi/trang giả lập có kiểm soát, không dùng API key thật.
 

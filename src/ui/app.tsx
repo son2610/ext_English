@@ -13,6 +13,7 @@ import { dayKey, statistics } from './stats';
 import { CaptureManagement, UnitManagement } from './library-management';
 import { dictationText as originalDictationText } from '../shared/source-text';
 import { Library } from './library';
+import { Lab } from './lab';
 import './style.css';
 import './enrichment.css';
 import './typography.css';
@@ -24,10 +25,10 @@ import { loadFrequency, learningPriority } from '../learning/frequency';
 import { optimizeSchedule, generateWeekly, prepareTargeted } from '../learning/maintenance';
 import { version as appVersion } from '../../package.json';
 
-type Page = 'home' | 'review' | 'library' | 'difficult' | 'insights' | 'settings';
+type Page = 'home' | 'review' | 'library' | 'lab' | 'difficult' | 'insights' | 'settings';
 type Data = Awaited<ReturnType<typeof allData>>;
 const empty: Data = { captures: [], units: [], reviews: [] };
-const pageNames: Record<Page, string> = { home: 'Góc học hôm nay', review: 'Ôn tập', library: 'Thư viện ngữ cảnh', difficult: 'Cần chăm sóc', insights: 'Hồ sơ & lộ trình', settings: 'Cài đặt & dữ liệu' };
+const pageNames: Record<Page, string> = { home: 'Góc học hôm nay', review: 'Ôn tập', library: 'Thư viện ngữ cảnh', lab: 'Phòng Lab', difficult: 'Cần chăm sóc', insights: 'Hồ sơ & lộ trình', settings: 'Cài đặt & dữ liệu' };
 function currentPage(): Page { const hash = location.hash.slice(1); return hash in pageNames ? hash as Page : 'home'; }
 const formatDate = (time: number) => new Date(time).toLocaleDateString('vi-VN', { day: 'numeric', month: 'short' });
 function Icon({ name, size = 20 }: { name: string; size?: number }) {
@@ -35,6 +36,7 @@ function Icon({ name, size = 20 }: { name: string; size?: number }) {
     home: <><path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/><path d="M9 21v-8h6v8"/></>,
     review: <><path d="M20 7A9 9 0 1 0 21 14M20 3v5h-5"/><path d="M12 7v5l3 2"/></>,
     library: <><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="9" y="4" width="5" height="16" rx="1"/><path d="m16 5 4-1 3 15-4 1Z"/></>,
+    lab: <><path d="M9 3h6M10 3v6L4 19a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2L14 9V3M7 15h10"/><path d="M10 18h.01M14 17h.01"/></>,
     difficult: <><path d="M12 21s-8-5-8-12a4 4 0 0 1 8-2 4 4 0 0 1 8 2c0 7-8 12-8 12Z"/><path d="M8 12h8m-4-4v8"/></>,
     settings: <><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></>,
     arrow: <><path d="M4 12h15m-6-6 6 6-6 6"/></>,
@@ -69,6 +71,7 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [message, setMessage] = useState('');
   const [libraryOverlay, setLibraryOverlay] = useState(false);
+  const [labActive, setLabActive] = useState(false);
   const [busy, setBusy] = useState(false);
   const refresh = useCallback(async () => { const [next, nextConfig] = await Promise.all([allData(), settings()]); setData(next); setConfig(nextConfig); setLoaded(true); }, []);
   useEffect(() => {
@@ -78,13 +81,13 @@ function App() {
     void settings().then(c => { if (c.weeklyAutomatic) return generateWeekly(); }).catch(error => setMessage(error instanceof Error ? error.message : 'Chưa tổng hợp được tuần.'));
   }, []);
   useEffect(() => {
-    const load = () => void refresh().catch(() => setMessage('Không đọc được cơ sở dữ liệu. Hãy tải lại trang; dữ liệu chưa bị thay đổi.'));
+    const load = () => { if (!labActive) void refresh().catch(() => setMessage('Không đọc được cơ sở dữ liệu. Hãy tải lại trang; dữ liệu chưa bị thay đổi.')); };
     load();
     const changed = () => setPage(currentPage());
     addEventListener('hashchange', changed); addEventListener('focus', load);
     const interval = window.setInterval(() => { if (!document.hidden) load(); }, 10000);
     return () => { removeEventListener('hashchange', changed); removeEventListener('focus', load); clearInterval(interval); };
-  }, [refresh]);
+  }, [refresh, labActive]);
   useEffect(() => { if (!message) return; const timeout = setTimeout(() => setMessage(''), 12000); return () => clearTimeout(timeout); }, [message]);
   async function run(action: () => Promise<unknown>, success = '') {
     setBusy(true);
@@ -100,7 +103,7 @@ function App() {
     <aside className="sidebar">
       <a className="brand" href="#home"><span className="brand-mark"><img src="icons/icon-128.png" alt=""/></span><span>LumaRead<small>HỌC TỪ ĐIỀU BẠN ĐỌC</small></span></a>
       <div className="workspace-label">KHÔNG GIAN CỦA BẠN</div>
-      <nav aria-label="Điều hướng chính">{(Object.keys(pageNames) as Page[]).map(key => <a key={key} href={`#${key}`} className={page === key ? 'nav-item active' : 'nav-item'} aria-current={page === key ? 'page' : undefined}><Icon name={key}/><span>{pageNames[key]}</span>{key === 'review' && queue.length > 0 && <b>{queue.length}</b>}{key === 'difficult' && difficult.length > 0 && <b>{difficult.length}</b>}</a>)}</nav>
+      <nav aria-label="Điều hướng chính">{(Object.keys(pageNames) as Page[]).map(key => <a key={key} aria-label={pageNames[key]} href={`#${key}`} className={page === key ? 'nav-item active' : 'nav-item'} aria-current={page === key ? 'page' : undefined}><Icon name={key}/><span>{pageNames[key]}</span>{key === 'review' && queue.length > 0 && <b>{queue.length}</b>}{key === 'difficult' && difficult.length > 0 && <b>{difficult.length}</b>}</a>)}</nav>
       <div className="sidebar-note"><span className="tiny-leaf"><Icon name="leaf"/></span><p>Mỗi lần đọc,<br/>thêm một chút hiểu.</p><small>Không cần học nhiều.<br/>Chỉ cần quay lại đúng lúc.</small></div>
       <div className="local-status"><span/> Dữ liệu lưu trên máy bạn</div>
     </aside>
@@ -121,6 +124,7 @@ function App() {
         </>}
         {page === 'library' && <Library onOverlayChange={setLibraryOverlay} captures={data.captures} units={data.units} busy={busy} run={run} notice={message} renderDetail={capture => <CaptureCard capture={capture} units={data.units} busy={busy} run={run}/>}/>}
         {page === 'review' && <ReviewPanel key={loaded ? 'loaded' : 'loading'} queue={queue} captures={data.captures} config={config} refresh={refresh} notify={setMessage}/>}
+        {page === 'lab' && <Lab captures={data.captures} units={data.units} config={config} onActiveChange={setLabActive}/>}
         {page === 'difficult' && <><Heading title="Thêm một cách hiểu khác." subtitle="Sai nhiều lần là một tín hiệu để đổi cách học. Sau 5 lần quên, mục được tạm dừng để bạn xem lại."/><div className="card-list">{difficult.map(u => <section className="panel knowledge-card" key={u.id}><div className="section-heading"><Tag tone="amber">{u.failures} lần quên</Tag><Tag>{u.knowledge.group}</Tag></div><h2>{u.knowledge.name}</h2><p className="english">{u.knowledge.form}</p><p>{u.alternativeVi ?? u.knowledge.explanationVi}</p><UnitTools unit={u} busy={busy} run={run}/><div className="actions"><button disabled={busy} onClick={() => void run(async () => { const ai = await provider(); await reviseUnit(u.id, { alternativeVi: await ai.explain(u.knowledge) }); }, 'Đã lưu cách giải thích mới.')}>Nhờ AI giải thích cách khác</button><button className="primary" disabled={busy} onClick={() => void run(() => reviseUnit(u.id, { suspended: false }), 'Đã đưa mục trở lại lịch ôn.')}>Tôi đã hiểu hơn · Ôn lại</button></div></section>)}{!difficult.length && <Empty title="Chưa có mục cần chăm sóc riêng." text="Những cấu trúc thường xuyên làm bạn vấp sẽ xuất hiện ở đây."/>}</div></>}
         {page === 'insights' && <Insights units={data.units} reviews={data.reviews} config={config} busy={busy} run={run}/>}
         {page === 'settings' && <SettingsPanel config={config} busy={busy} run={run}/>}

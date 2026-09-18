@@ -1,4 +1,34 @@
-# Nghiệm thu bản 0.4.0 — LumaRead
+# Nghiệm thu bản 0.5.1 — LumaRead
+
+Kiểm tra ngày **18/09/2026**: TypeScript strict, build, kiểm tra UTF-8 64 file và **145/145 unit tests** đạt. Bổ sung 11 kiểm thử lịch lặp vô hạn và 1 kiểm thử backup Lab cũ không có `repeat`; export/import kiểm tra cả `repeat=true`.
+
+Bộ [E2E Lab](../test-results/lab-e2e-report.json) chạy lại trên dist **0.5.1**, Chromium **149.0.7827.55**, đạt **18/18 kiểm tra**. Ba kiểm tra mới: một mục Lướt nhanh qua ít nhất hai vòng mà không hiện kết quả, tạm dừng giữ nguyên vòng/tiến độ và bấm **■ Dừng** mới kết thúc; tùy chọn lặp được giữ qua reload; Bong bóng một mục hiện đủ mặt tiếng Anh/nghĩa ở các vòng liên tiếp, chỉ dựng số ô giới hạn và dừng theo yêu cầu. Captures, units/FSRS, reviews, assessments và usage giữ nguyên, không có cuộc gọi mạng/API hoặc lỗi trang.
+
+Chế độ lặp tính thời gian theo vòng, giữ bộ thẻ cố định; không nhân đôi mảng thẻ hoặc lưu lịch sử từng vòng. Chuyển tab vẫn tạm dừng và cần tiếp tục thủ công. Chỉ áp dụng cho Lướt nhanh/Bong bóng, còn Điền khuyết giữ luồng trả lời hữu hạn. [Ảnh chế độ lặp](../test-results/lab-stream-repeat.png), [hướng dẫn](LAB.vi.md).
+
+Các kết quả năm bộ E2E cũ bên dưới thuộc bản 0.5.0; trong 0.5.1 chỉ chạy lại bộ Lab cùng toàn bộ unit tests vì thay đổi nằm trong Lab và schema thiết lập tương thích ngược.
+
+## Lịch sử nghiệm thu 0.5.0
+
+Kiểm tra ngày **18/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55**, hồ sơ thử riêng. TypeScript strict, build, kiểm tra UTF-8 **64 file** và **133/133 unit tests** đạt. Trong đó có 32 kiểm thử Lab mới: nguồn dữ liệu/bộ lọc/chọn thẻ, lịch hiển thị, đối chiếu đáp án, lưu thiết lập đồng thời và export/import.
+
+**Phòng Lab: 15/15 kiểm tra trình duyệt đạt** — [báo cáo](../test-results/lab-e2e-report.json).
+
+- Thư viện trống không cho bắt đầu; loại câu thiếu nghĩa/ghi chú; lọc nhóm/nhãn, nguồn và tiến độ. Dùng **2.001 câu + 2 đơn vị học**: DOM thiết lập/lượt vẫn dưới 1.000 node; chỉ 1 thẻ lướt hoặc tối đa 16 ô bong bóng.
+- Lướt nhanh có tiếng Anh/nghĩa, ẩn nghĩa, nhịp 0,6 giây, hết lượt tự kết thúc, luyện lại và giữ thiết lập qua reload. Tạm dừng giữ nguyên nội dung và tiến độ; Space hoạt động ngoài vùng nhập.
+- Bong bóng hiện mặt tiếng Anh, tự lật nghĩa, biến mất và hoàn thành lượt; bấm thẻ mở chi tiết và dừng nhịp. Ảnh 3 × 3 có đủ 9 ô; bảng 4 × 4 trên cửa sổ 390 px không tràn ngang. Với thẻ dài, cần mở chi tiết để đọc đủ.
+- Fullscreen vào/ra bằng API thật; giảm chuyển động tắt animation/transition. Rời Lab dọn timer và quay lại màn hình thiết lập. Chuyển tab dừng, không tự tiếp tục; riêng tín hiệu `document.hidden` được giả lập vì headless không luôn chuyển tab sang nền như Chrome có cửa sổ.
+- Điền khuyết buộc gõ đáp án, không chặn phím Space trong ô nhập; phản hồi đúng/sai và đánh dấu luyện lại. Captures, units/lịch FSRS, reviews, assessments và usage trước/sau giữ nguyên. Không có lỗi trang hoặc cuộc gọi mạng/API trong bài kiểm tra Lab.
+
+Ảnh giao diện thật với dữ liệu minh họa: [thiết lập](../test-results/lab-setup-desktop.png), [lướt nhanh](../test-results/lab-stream-desktop.png), [bong bóng](../test-results/lab-bubbles-desktop.png), [điền khuyết](../test-results/lab-cloze-desktop.png), [màn hình hẹp](../test-results/lab-bubbles-mobile.png).
+
+Năm bộ E2E cũ cũng được chạy lại trên dist 0.5.0 và đạt: [capture/ôn tập](../test-results/e2e-report.json) **14**, [YouTube/học bổ sung](../test-results/enrichment-e2e-report.json) **26**, [Gemini](../test-results/gemini-e2e-report.json) **5**, [thư viện](../test-results/organization-e2e-report.json) **10**, [AI dự phòng](../test-results/ai-fallback-e2e-report.json) **11**. Tổng **81 kiểm tra E2E**. Sửa hai giả định không ổn định trong script AI cũ: chờ UI sau reload trước khi đếm kết nối; cấp thời gian lưu riêng cho từng câu mẫu để phép thử chọn đúng câu mới.
+
+Kiểm tra thư viện 5.000 câu vẫn dựng 24 thẻ, đủ 334 glyph Việt NFC/NFD; phép đo CPU 4×: tải 3.597 ms, tìm 605 ms, mở chi tiết 542 ms (bao gồm thao tác Playwright). Đây là số đo trên máy kiểm thử, không bảo đảm mọi thiết bị có cùng độ trễ.
+
+**Giới hạn:** các API Gemini/DeepSeek và trang YouTube trong kiểm thử là fixture; không dùng key thật. Phép thử Lab xác minh hoạt động và bảo toàn dữ liệu, không đo hiệu quả ghi nhớ dài hạn. Không có quyền Chrome mới, không đổi phiên bản IndexedDB/backup, chưa gửi bản này lên Store. Hướng dẫn sử dụng và các đánh đổi nằm trong [LAB.vi.md](LAB.vi.md).
+
+## Lịch sử nghiệm thu 0.4.0
 
 Kiểm tra ngày **12/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55**, hồ sơ thử riêng. TypeScript strict, build và kiểm tra UTF-8 của **60 file** đạt. **101/101 kiểm thử unit** đạt, gồm **37 kiểm thử mới** cho đa nhà cung cấp, JSON, lỗi, quota, khóa và cấu hình.
 

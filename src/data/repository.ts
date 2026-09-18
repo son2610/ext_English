@@ -1,6 +1,7 @@
 import { db } from './db';
 import { canonical, defaultSettings, normalize, SettingsSchema, type Analysis, type Capture, type Grade, type Knowledge, type Review, type Settings, type Source, type Unit, type ExerciseMode } from '../domain/models';
 import { scheduler } from '../domain/scheduler';
+import { LabPreferencesSchema, type LabPreferences } from '../domain/lab';
 
 export async function settings(): Promise<Settings> {
   return SettingsSchema.parse((await (await db).get('meta', 'settings'))?.value ?? defaultSettings);
@@ -8,11 +9,18 @@ export async function settings(): Promise<Settings> {
 export async function saveSettings(value: Settings): Promise<void> {
   await (await db).put('meta', { key: 'settings', value: SettingsSchema.parse(value) });
 }
+/** Save only Lab preferences so another settings panel cannot overwrite them. */
+export async function saveLabPreferences(value: LabPreferences): Promise<void> {
+  const lab = LabPreferencesSchema.parse(value);
+  const tx = (await db).transaction('meta', 'readwrite');
+  const current = SettingsSchema.parse((await tx.store.get('settings'))?.value ?? {});
+  await tx.store.put({ key: 'settings', value: { ...current, lab } }); await tx.done;
+}
 /** General settings and provider settings are saved independently in the UI. */
 export async function saveGeneralSettings(value: Settings): Promise<void> {
   const tx = (await db).transaction('meta', 'readwrite');
   const current = SettingsSchema.parse((await tx.store.get('settings'))?.value ?? {});
-  await tx.store.put({ key: 'settings', value: SettingsSchema.parse({ ...value, ai: current.ai }) }); await tx.done;
+  await tx.store.put({ key: 'settings', value: SettingsSchema.parse({ ...value, ai: current.ai, lab: current.lab }) }); await tx.done;
 }
 export async function allData() {
   const database = await db;

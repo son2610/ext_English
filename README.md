@@ -1,6 +1,8 @@
 # LumaRead — Tiếng Anh từ ngữ cảnh
 
-Chrome Extension học tiếng Anh từ bài đọc và video YouTube, trước đây là Mạch Đọc. Bản **0.4.0** thêm nhiều nhà cung cấp AI và tự chuyển dự phòng khi lỗi, giữ thư viện thẻ gọn, nhóm và nhãn màu, tìm kiếm không dấu, lọc tiến độ, thao tác hàng loạt và phân trang 24 câu. Font Noto Sans tiếng Việt được đóng gói cùng icon mới; tên nhà phát hành **Blue**. TypeScript strict, MV3, React, IndexedDB, FSRS. Không có backend riêng; AI, từ điển và video gốc cần mạng.
+Chrome Extension học tiếng Anh từ bài đọc và video YouTube, trước đây là Mạch Đọc. Bản **0.5.0** thêm **Phòng Lab**: lướt nhanh, bảng bong bóng tự lật và điền khuyết; dùng thư viện có sẵn, không gọi AI, giữ nguyên lịch FSRS. Vẫn có nhiều nhà cung cấp AI dự phòng, thư viện thẻ gọn, nhóm/nhãn màu, tìm kiếm không dấu và phân trang. Font Noto Sans tiếng Việt được đóng gói cùng extension; nhà phát hành **Blue**. TypeScript strict, MV3, React, IndexedDB, FSRS. Không có backend riêng; AI, từ điển và video gốc cần mạng.
+
+**Phòng Lab:** chọn ở thanh điều hướng → chọn chế độ → lọc nguồn/nhóm/nhãn/tiến độ → đặt số mục và thời gian → bắt đầu. Bản **0.5.1** thêm **Lặp lại liên tục** cho Lướt nhanh/Bong bóng: hết bộ từ tự chạy lại cho đến khi bấm **■ Dừng**, kể cả chỉ có một từ. Nhập số mục **0** để luyện tất cả; bấm thẻ bong bóng để dừng và xem đầy đủ. Có toàn màn hình, ẩn nghĩa, đánh dấu luyện lại và tự tạm dừng khi chuyển tab. Xem [hướng dẫn Lab và thiết kế](docs/LAB.vi.md).
 
 **Cấu hình mới:** giữ Gemini đang dùng → thêm DeepSeek → nhập khóa/model → bật tự dự phòng → Lưu cấu hình AI → Kiểm tra JSON. Xem [hướng dẫn, quy tắc chuyển và hợp đồng dữ liệu](docs/AI-PROVIDERS.vi.md). Khóa riêng từng nhà cung cấp, không có trong export; mọi lần thử tính chung vào hạn mức.
 

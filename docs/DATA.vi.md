@@ -1,5 +1,9 @@
 # Hợp đồng dữ liệu
 
+**Cập nhật 0.5.1:** `Settings.lab.repeat` mặc định `false` khi đọc dữ liệu cũ; bật để lặp vô hạn bộ thẻ Lướt nhanh/Bong bóng. Export/import vẫn dùng v3. Lượt lặp chỉ tính số lần hiển thị trong bộ nhớ, không thêm lịch sử ôn hoặc sửa FSRS.
+
+**Cập nhật 0.5.0:** `Settings.lab?` lưu chế độ, nguồn, tiến độ, nhóm/nhãn, số mục, tốc độ, thứ tự, ẩn nghĩa và kích thước bảng. Schema/default ở `src/domain/lab.ts`; vẫn dùng IDB v3 và backup v3. Lab không tạo Review/Assessment hoặc sửa Unit.schedule. Lưu thiết lập Lab và cài đặt chung bảo toàn các phần khác trong cùng transaction. Xem [hướng dẫn Lab](LAB.vi.md).
+
 **Cập nhật 0.4.0:** AI đa nhà cung cấp và dự phòng áp dụng cho mọi tác vụ; xem [thiết kế hiện tại](AI-PROVIDERS.vi.md). `Settings.ai?` lưu danh sách/thứ tự/model, không chứa khóa; `Usage` có provider/connectionId/fallback/errorCode tùy chọn. Giữ IDB v3, backup v3, hợp đồng Analysis/Grade và lịch FSRS. Mô tả chỉ Gemini bên dưới thuộc kiến trúc trước 0.4.0.
 
 

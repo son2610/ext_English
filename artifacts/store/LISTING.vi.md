@@ -1,4 +1,4 @@
-# Nội dung Chrome Web Store — LumaRead 0.4.0
+# Nội dung Chrome Web Store — LumaRead 0.5.1
 
 **Tên tiện ích:** LumaRead — Tiếng Anh từ ngữ cảnh
 
@@ -33,6 +33,13 @@ TỰ VIẾT RA ĐỂ NHỚ LÂU HƠN
 • Nhờ AI chấm câu bạn viết, chỉ ra lỗi cụ thể và giải thích cách sửa.
 • Luyện nghe chép chính tả và xem nhóm ngữ pháp mình còn yếu.
 
+PHÒNG LAB — THỬ MỘT CÁCH GẶP LẠI MỚI
+• Lướt nhanh câu/cụm từ tiếng Anh và nghĩa tiếng Việt; chọn số mục và tốc độ, có thể ẩn nghĩa để tự đoán.
+• Bật lặp lại liên tục để bộ từ tự chạy qua nhiều vòng, cho đến khi bạn bấm Dừng.
+• Bảng bong bóng nhiều màu: thẻ hiện tiếng Anh, tự lật sang nghĩa rồi nhường chỗ cho mục tiếp theo.
+• Tự gõ đáp án điền khuyết, đánh dấu mục muốn luyện lại, lọc theo nhóm/nhãn và tiến độ.
+• Dùng nội dung đã lưu, không gọi AI. Tạm dừng, toàn màn hình, tự dừng khi chuyển tab. Lab là luyện thêm và không tự thay đổi lịch FSRS.
+
 THƯ VIỆN NGĂN NẮP, DÙ BẠN ĐÃ LƯU NHIỀU NĂM
 • Thẻ ngữ cảnh gọn, bấm để mở chi tiết; có thêm chế độ danh sách gọn.
 • Chia nhóm theo chủ đề, gắn nhãn màu, tìm kiếm tiếng Việt có hoặc không dấu.
@@ -59,7 +66,7 @@ Hỗ trợ: Blue — phamhongson5151@gmail.com
 
 | Mục | File |
 | --- | --- |
-| Gói extension | `../lumaread-0.4.0.zip` |
+| Gói extension | `../lumaread-0.5.1.zip` |
 | Icon Store 128 × 128, nền ngoài trong suốt | `icon-128.png` |
 | Ảnh quảng bá nhỏ 440 × 280 | `promo-440x280.png` |
 | Ảnh quảng bá rộng 1400 × 560 | `marquee-1400x560.png` |

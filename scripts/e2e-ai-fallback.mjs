@@ -57,7 +57,9 @@ try {
   await app.getByRole('status').filter({ hasText: 'Đã lưu cấu hình AI' }).waitFor(); checks.push('settings-add-deepseek-keeps-gemini-key-and-model');
   assert.deepEqual(await app.evaluate(() => globalThis.permissionTrace[0].origins.sort()), ['https://api.deepseek.com/*', 'https://generativelanguage.googleapis.com/*']);
   await app.getByRole('button', { name: 'Lưu cài đặt', exact: true }).click();
-  await app.reload(); assert.equal(await app.locator('.ai-connection').count(), 2); checks.push('general-settings-save-preserves-ai-config-and-order');
+  await app.getByText('Đã lưu cài đặt.', { exact: true }).waitFor();
+  await app.reload(); await app.locator('.ai-connection').nth(1).waitFor();
+  assert.equal(await app.locator('.ai-connection').count(), 2); checks.push('general-settings-save-preserves-ai-config-and-order');
   assert.ok(await app.evaluate(async () => { const s = await chrome.storage.local.get(['aiKeys', 'geminiKey']); return !s.geminiKey && Object.values(s.aiKeys).length === 2; }));
   const deepseek = app.locator('.ai-connection').nth(1); await deepseek.locator('summary').click();
   await app.route('https://api.deepseek.com/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ connected: true, messageVi: 'Kết nối thử thành công.' }) } }], usage: { total_tokens: 15 } }) }));
@@ -73,7 +75,7 @@ try {
       const tx = d.transaction(['captures', 'meta'], 'readwrite'); const id = crypto.randomUUID(); const now = Date.now();
       const setting = await new Promise(resolve => { const r = tx.objectStore('meta').get('settings'); r.onsuccess = () => resolve(r.result); });
       tx.objectStore('meta').put({ ...setting, value: { ...setting.value, autoBackup: false, targetedAutomatic: false } });
-      tx.objectStore('captures').put({ id, source: { ...source, ...(video ? { video: { provider: 'youtube', videoId: 'dQw4w9WgXcQ', start: 5, end: 9, language: 'en', automatic: true, timing: 'track', captionSource: 'text-track' } } : {}) }, note, status: 'saved', attempts: 0, nextAttemptAt: 0, leaseUntil: 0, updatedAt: now, unitsCreated: false });
+      tx.objectStore('captures').put({ id, source: { ...source, capturedAt: now, ...(video ? { video: { provider: 'youtube', videoId: 'dQw4w9WgXcQ', start: 5, end: 9, language: 'en', automatic: true, timing: 'track', captionSource: 'text-track' } } : {}) }, note, status: 'saved', attempts: 0, nextAttemptAt: 0, leaseUntil: 0, updatedAt: now, unitsCreated: false });
       await new Promise(resolve => tx.oncomplete = resolve); d.close(); return id;
     }, { source, note, video });
   }
@@ -107,5 +109,8 @@ try {
   assert.deepEqual(pageErrors, []);
   await writeFile('test-results/ai-fallback-e2e-report.json', JSON.stringify({ status: 'passed', at: new Date().toISOString(), browser: context.browser()?.version(), profilePath, checks, pageErrors, note: 'Real extension UI, worker and IndexedDB; native permission approval and API responses are fixtures. Permission origins are asserted. No live AI keys.' }, null, 2));
   console.log(`AI FALLBACK E2E PASS (${checks.length} checks)`);
-} catch (error) { for (const [i, page] of context.pages().entries()) { console.log('UI diagnostic', await page.evaluate(() => ({ status: Array.from(document.querySelectorAll('[role=status]')).map(x => x.textContent), permissions: globalThis.permissionTrace })).catch(() => ({}))); await page.screenshot({ path: `test-results/ai-fallback-failure-${i}.png` }).catch(() => undefined); } throw error; }
+} catch (error) {
+  await writeFile('test-results/ai-fallback-e2e-report.json', JSON.stringify({ status: 'failed', at: new Date().toISOString(), profilePath, checks, pageErrors, error: String(error) }, null, 2));
+  for (const [i, page] of context.pages().entries()) { console.log('UI diagnostic', await page.evaluate(() => ({ status: Array.from(document.querySelectorAll('[role=status]')).map(x => x.textContent), permissions: globalThis.permissionTrace })).catch(() => ({}))); await page.screenshot({ path: `test-results/ai-fallback-failure-${i}.png` }).catch(() => undefined); } throw error;
+}
 finally { await context.close(); }

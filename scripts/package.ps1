@@ -5,14 +5,14 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $manifest = Get-Content -LiteralPath (Join-Path $projectRoot 'dist/manifest.json') -Encoding UTF8 -Raw | ConvertFrom-Json
 if ($manifest.version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw 'Invalid manifest version.' }
 
-function New-PortableArchive([string]$SourceDirectory, [string]$Destination) {
+function New-PortableArchive([string]$SourceDirectory, [string]$Destination, [string[]]$Exclude = @()) {
   $sourceRoot = (Resolve-Path -LiteralPath $SourceDirectory).Path
   if (-not $sourceRoot.StartsWith($projectRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Archive source must be inside the workspace.' }
   if (@(Get-ChildItem -LiteralPath $sourceRoot -Recurse -Force -Attributes ReparsePoint).Count) { throw 'Archive source contains a reparse point.' }
   $output = [IO.File]::Open($Destination, [IO.FileMode]::Create)
   $archive = New-Object IO.Compression.ZipArchive($output, [IO.Compression.ZipArchiveMode]::Create)
   try {
-    foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Sort-Object FullName) {
+    foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -File -Recurse | Where-Object { $name = $_.Name; -not ($Exclude | Where-Object { $name -like $_ }) } | Sort-Object FullName) {
       # Windows Compress-Archive uses backslashes; Store ZIPs need portable '/' paths.
       $entryName = $file.FullName.Substring($sourceRoot.Length + 1).Replace('\', '/')
       $entry = $archive.CreateEntry($entryName, [IO.Compression.CompressionLevel]::Optimal)
@@ -33,7 +33,8 @@ function New-PortableArchive([string]$SourceDirectory, [string]$Destination) {
   } finally { $check.Dispose() }
 }
 
-$release = New-PortableArchive (Join-Path $projectRoot 'dist') (Join-Path $projectRoot "artifacts/lumaread-$($manifest.version).zip")
+# Source maps embed the original TypeScript; the Store package ships only the minified bundles (dist/ keeps maps for local debugging).
+$release = New-PortableArchive (Join-Path $projectRoot 'dist') (Join-Path $projectRoot "artifacts/lumaread-$($manifest.version).zip") @('*.map')
 $store = New-PortableArchive (Join-Path $projectRoot 'artifacts/store') (Join-Path $projectRoot "artifacts/lumaread-store-kit-$($manifest.version).zip")
 $report = [PSCustomObject]@{ Name = $manifest.name; Version = $manifest.version; Author = $manifest.author; Archives = @($release, $store) }
 $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $projectRoot "artifacts/release-$($manifest.version).json") -Encoding UTF8

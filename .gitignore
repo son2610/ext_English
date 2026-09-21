@@ -6,3 +6,6 @@ test-results/
 *.log
 .env*
 index.html
+# Store/release packages are built locally for upload, not committed (from 0.6.0).
+artifacts/*.zip
+artifacts/release-*.json

@@ -29,7 +29,8 @@
 | `npm run check:text` | Quét UTF-8/mojibake trong `src` + `public`, giới hạn tên ≤75/mô tả ≤132 ký tự của manifest, version manifest = package.json, kích thước PNG icon |
 | `node scripts/performance.mjs` | Đo highlight 3.000 unit trên trang dài, CPU throttle |
 | `node scripts/schema.mjs` | Sinh `docs/*.schema.json` từ Zod (không sửa tay) |
-| `scripts/package.ps1` | Zip `dist/` + `artifacts/store/` → `artifacts/lumaread-<ver>.zip`, `lumaread-store-kit-<ver>.zip`, `release-<ver>.json` (SHA-256) |
+| `scripts/package.ps1` | Zip `dist/` (bỏ `*.map` để gói Store không chứa mã nguồn gốc) + `artifacts/store/` → `artifacts/lumaread-<ver>.zip`, `lumaread-store-kit-<ver>.zip`, `release-<ver>.json` (SHA-256) |
+| `node scripts/store-screenshots.mjs` | Ảnh Store 04 (Lab Ghép cặp) và 05 (popup Ôn 30 giây), 1280 × 800, từ `dist`. Nội dung nộp Store: `artifacts/store/LISTING.vi.md`, các bước: `artifacts/store/SUBMIT.vi.md` |
 | `$env:NO_NEW_TAB='1'; npm run build` | Build không override tab mới |
 
 Cài: `chrome://extensions` → Developer mode → **Load unpacked** → `dist/`. Sau mỗi build: Reload extension, tải lại tab app và trang đọc. Node 22+, Chrome ≥ 120.

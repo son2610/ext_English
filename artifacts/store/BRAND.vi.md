@@ -11,6 +11,8 @@ Tên ghép ý niệm ánh sáng/hiểu rõ với hành động đọc. Logo là 
 - `icon-128.png`: bản riêng để tải lên Store.
 - `promo-440x280.png`, `marquee-1400x560.png`: bố cục thương hiệu bằng HTML/CSS với icon đã tạo và font Noto; xuất bằng Chromium. `brand-preview.html` là bản xem độc lập có nhúng font/icon.
 - `01-library-1280x800.png`, `02-context-1280x800.png`, `03-review-1280x800.png`: ảnh chụp ứng dụng thật với dữ liệu minh hoạ trong profile kiểm thử riêng.
+- `04-lab-match-1280x800.png` (Phòng Lab, Ghép cặp) và `05-quick-review-1280x800.png` (popup Ôn 30 giây thật đặt trên nền thương hiệu, có chú thích): tạo bằng `node scripts/store-screenshots.mjs` từ bản `dist` với dữ liệu minh hoạ.
+- `LISTING.vi.md`: nội dung dán vào Dashboard. `SUBMIT.vi.md`: các bước nộp lần đầu.
 - `FONT-LICENSE.txt`: giấy phép SIL Open Font License của Noto Sans.
 
 Tạo lại các kích thước icon: `node scripts/prepare-brand.mjs`. Tạo lại ảnh quảng bá: `node scripts/store-assets.mjs`. Ảnh screenshot tạo bởi `node scripts/e2e-organization.mjs`. Các script này không gọi API sinh ảnh hoặc cần API key. Ảnh gốc được tạo một lần bằng imagegen tích hợp, không dùng CLI/API fallback.

@@ -53,7 +53,7 @@ function validCloze(unit: Unit, captures: Capture[]): LabCard['cloze'] {
       !answer.trim() || !hintVi.trim() || answer.includes('[[blank]]')) return undefined;
   // A backup or a later source edit can leave a structurally valid but ungrounded exercise.
   // Only use a cloze that still occurs in at least one of this unit's verified contexts.
-  const restored = normalizeContext(sentence.replace('[[blank]]', answer));
+  const restored = normalizeContext(sentence.replace('[[blank]]', () => answer));
   const grounded = captures.some(capture => [
     capture.source.exact, capture.source.originalExact ?? '', capture.source.context,
     capture.source.video ? capture.analysis?.transcript?.textEn ?? '' : '',

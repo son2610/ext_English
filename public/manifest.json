@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LumaRead — Tiếng Anh từ ngữ cảnh",
   "description": "Biến câu tiếng Anh trên web và YouTube thành bài học: giải thích AI bằng tiếng Việt, nhãn màu, luyện viết và ôn đúng hạn.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "minimum_chrome_version": "120",
   "permissions": [
     "storage",

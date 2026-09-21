@@ -116,7 +116,8 @@ export function validateAnalysis(raw: unknown, source: Source): Analysis {
   for (const item of analysis.knowledge) {
     if (!original.includes(normalize(item.evidence))) throw new Error('AI trích dẫn nội dung không có trong ngữ cảnh. Hãy thử phân tích lại.');
     if ((item.cloze.sentence.match(/\[\[blank\]\]/g) ?? []).length !== 1) throw new Error('Bài điền khuyết phải có đúng một chỗ trống.');
-    const restored = normalize(item.cloze.sentence.replace('[[blank]]', item.cloze.answer));
+    // A replacer function keeps "$&" or "$$" in an answer literal.
+    const restored = normalize(item.cloze.sentence.replace('[[blank]]', () => item.cloze.answer));
     if (!original.includes(restored)) throw new Error('Bài điền khuyết không khớp câu gốc.');
   }
   return analysis;

@@ -16,11 +16,12 @@ export async function saveLabPreferences(value: LabPreferences): Promise<void> {
   const current = SettingsSchema.parse((await tx.store.get('settings'))?.value ?? {});
   await tx.store.put({ key: 'settings', value: { ...current, lab } }); await tx.done;
 }
-/** General settings and provider settings are saved independently in the UI. */
+/** General settings and provider settings are saved independently in the UI. FSRS weights are written only by
+ *  the optimizer and its undo, so a form opened before a calibration cannot roll them back. */
 export async function saveGeneralSettings(value: Settings): Promise<void> {
   const tx = (await db).transaction('meta', 'readwrite');
   const current = SettingsSchema.parse((await tx.store.get('settings'))?.value ?? {});
-  await tx.store.put({ key: 'settings', value: SettingsSchema.parse({ ...value, ai: current.ai, lab: current.lab }) }); await tx.done;
+  await tx.store.put({ key: 'settings', value: SettingsSchema.parse({ ...value, ai: current.ai, lab: current.lab, fsrsWeights: current.fsrsWeights }) }); await tx.done;
 }
 export async function allData() {
   const database = await db;
@@ -47,18 +48,28 @@ export async function capture(source: Source, note: string, analyze: boolean): P
 }
 export async function enqueue(ids: string[]) {
   const tx = (await db).transaction('captures', 'readwrite');
-  const items = await Promise.all(ids.map(id => tx.store.get(id)));
-  if (items.some(item => item && !item.unitsCreated && item.source.video && !/^en(?:-|$)/i.test(item.source.video.language))) { await tx.done; throw new Error('Phụ đề chưa xác định là tiếng Anh. Hãy chọn track tiếng Anh trước.'); }
-  for (const item of items) {
-    if (!item || item.unitsCreated || (item.status === 'processing' && item.leaseUntil > Date.now())) continue;
-    await tx.store.put({ ...item, status: 'queued', deferredAnalysis: false, error: undefined, attempts: 0, nextAttemptAt: 0, updatedAt: Date.now() });
-  }
+  const now = Date.now();
+  // An analyzed capture only awaits review: sending it again would spend quota and replace that analysis.
+  const items = (await Promise.all(ids.map(id => tx.store.get(id)))).filter((item): item is Capture =>
+    !!item && !item.unitsCreated && !item.analysis && !(item.status === 'processing' && item.leaseUntil > now));
+  if (items.some(item => item.source.video && !/^en(?:-|$)/i.test(item.source.video.language))) { await tx.done; throw new Error('Phụ đề chưa xác định là tiếng Anh. Hãy chọn track tiếng Anh trước.'); }
+  for (const item of items) await tx.store.put({ ...item, status: 'queued', deferredAnalysis: false, error: undefined, attempts: 0, nextAttemptAt: 0, updatedAt: now });
   await tx.done;
 }
+/** Automatic analysis attempts per capture, including attempts interrupted by a stopped worker. */
+export const MAX_ATTEMPTS = 4;
 export async function claimJob(now = Date.now()): Promise<Capture | undefined> {
   const tx = (await db).transaction('captures', 'readwrite');
-  const items = await tx.store.getAll();
-  const item = items.find(c => (c.status === 'queued' && c.nextAttemptAt <= now) || (c.status === 'processing' && c.leaseUntil <= now));
+  let item: Capture | undefined;
+  for (const c of await tx.store.getAll()) {
+    const expired = c.status === 'processing' && c.leaseUntil <= now;
+    if (expired && c.attempts >= MAX_ATTEMPTS) {
+      // Every allowed attempt was cut off; stop reclaiming it forever and let the learner retry.
+      await tx.store.put({ ...c, status: 'error', error: 'Phân tích bị gián đoạn nhiều lần. Bấm “Nhờ AI phân tích” để thử lại.', leaseUntil: 0, updatedAt: Math.max(Date.now(), c.updatedAt + 1) });
+      continue;
+    }
+    if ((c.status === 'queued' && c.nextAttemptAt <= now) || expired) { item = c; break; }
+  }
   if (item) {
     item.status = 'processing'; item.leaseUntil = now + 90000; item.attempts++;
     await tx.store.put(item);
@@ -130,7 +141,9 @@ export async function recordReview(input: { id: string; unitId: string; expected
 export async function reviseUnit(id: string, patch: Pick<Partial<Unit>, 'suspended' | 'alternativeVi' | 'reportedIssue' | 'priority'>): Promise<void> {
   const tx = (await db).transaction('units', 'readwrite');
   const unit = await tx.store.get(id);
-  if (unit) await tx.store.put({ ...unit, ...patch, failures: patch.suspended === false ? 0 : unit.failures, leech: patch.suspended === false ? false : unit.leech, updatedAt: Date.now() });
+  // Releasing a leech starts its failure count again; clearing a content report keeps the memory history.
+  const release = patch.suspended === false && unit?.leech;
+  if (unit) await tx.store.put({ ...unit, ...patch, failures: release ? 0 : unit.failures, leech: release ? false : unit.leech, updatedAt: Date.now() });
   await tx.done;
 }
 export async function encounter(unitId: string, page: string) {

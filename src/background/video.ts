@@ -41,6 +41,8 @@ export async function videoMessage(message: z.infer<typeof ContentMessageSchema>
     const chunks: Uint8Array[] = []; let bytes = 0;
     try { while (true) { const part = await reader.read(); if (part.done) break; bytes += part.value.length; if (bytes > 8 * 1024 * 1024) throw new Error('Track quá lớn. Dùng phụ đề đang hiển thị.'); chunks.push(part.value); } } finally { await reader.cancel().catch(() => undefined); }
     const text = await new Blob(chunks as BlobPart[]).text();
+    // YouTube can answer 200 with an empty body; that simply means "no cues", so the next adapter runs.
+    if (!text.trim()) return [];
     return parseJson3(JSON.parse(text), message.language, message.automatic);
   }
   if (message.type === 'video-notes' || message.type === 'video-release-batch') {

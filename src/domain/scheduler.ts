@@ -1,5 +1,5 @@
 import { createEmptyCard, fsrs, Rating, type Card, type Grade as FsrsGrade } from 'ts-fsrs';
-import type { Schedule, Unit, ExerciseMode } from './models';
+import { normalize, type Schedule, type Unit, type ExerciseMode } from './models';
 
 export interface Scheduler {
   initial(now: number): Schedule;
@@ -17,14 +17,21 @@ export const scheduler: Scheduler = {
   },
 };
 export { Rating };
+/** First letter of each word, e.g. "take for granted" → "t___ f__ g______". */
+export function initialsHint(text: string): string {
+  return text.replace(/[\p{L}\p{N}]+/gu, word => word.length > 1 ? word[0] + '_'.repeat(word.length - 1) : '_');
+}
 export function exercise(unit: Unit): { mode: ExerciseMode; prompt: string; answer: string; hint: string } {
-  const n = unit.schedule.reps;
-  if (n % 3 === 1) return { mode: 'cloze', prompt: unit.knowledge.cloze.sentence.replace('[[blank]]', '________'), answer: unit.knowledge.cloze.answer, hint: unit.knowledge.cloze.hintVi };
+  const n = unit.schedule.reps, k = unit.knowledge;
+  // A note-only lesson stores a bare "[[blank]]": there is no sentence to complete, so drill it as production.
+  if (n % 3 === 1 && /[\p{L}\p{N}]/u.test(k.cloze.sentence.replace('[[blank]]', ''))) return { mode: 'cloze', prompt: k.cloze.sentence.replace('[[blank]]', '________'), answer: k.cloze.answer, hint: k.cloze.hintVi };
   if (n % 3 === 2) {
-    const example = unit.knowledge.examples[Math.floor(n / 3) % unit.knowledge.examples.length]!;
-    return { mode: 'transfer', prompt: `Viết câu tiếng Anh diễn đạt ý sau, dùng ${unit.knowledge.form}:\n${example.vi}`, answer: example.en, hint: unit.knowledge.name };
+    const example = k.examples[Math.floor(n / 3) % k.examples.length]!;
+    // Naming the target form would print the answer when the example is the saved phrase itself.
+    if (normalize(example.en) !== normalize(k.form)) return { mode: 'transfer', prompt: `Viết câu tiếng Anh diễn đạt ý sau, dùng ${k.form}:\n${example.vi}`, answer: example.en, hint: k.name };
   }
-  return { mode: 'production', prompt: unit.knowledge.production.instructionVi, answer: unit.knowledge.production.answerEn, hint: unit.knowledge.form };
+  const answer = k.production.answerEn;
+  return { mode: 'production', prompt: k.production.instructionVi, answer, hint: normalize(k.form) === normalize(answer) ? initialsHint(answer) : k.form };
 }
 export function dueQueue(units: Unit[], now: number, newLimit: number, priority: (unit: Unit) => number = () => 0): Unit[] {
   const due = units.filter(u => !u.suspended && u.schedule.due <= now).sort((a, b) => {

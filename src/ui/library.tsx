@@ -57,7 +57,8 @@ export function Library({ captures, units, busy, run, notice, renderDetail, onOv
   const active = captures.find(c => c.id === opened);
   const activeIndex = filtered.findIndex(e => e.capture.id === opened);
   const allVisibleSelected = visible.length > 0 && visible.every(e => selected.has(e.capture.id));
-  const actionable = captures.filter(c => selected.has(c.id) && !c.unitsCreated && c.status !== 'processing' && c.status !== 'queued');
+  // Analyzed captures await review ("Duyệt"); only unanalyzed ones can be sent to AI.
+  const actionable = captures.filter(c => selected.has(c.id) && !c.unitsCreated && !c.analysis && c.status !== 'processing' && c.status !== 'queued');
 
   return <section className="library-workspace">
     <div className="page-heading library-heading"><div><div className="eyebrow">TỪ TRANG ĐỌC ĐẾN TRÍ NHỚ</div><h1>Thư viện ngữ cảnh<span className="sage-dot">.</span></h1><p>Những câu đáng giữ, trong một góc học ngăn nắp.</p></div><button onClick={() => setManaging(true)}>＋ Nhóm & nhãn</button></div>

@@ -10,6 +10,13 @@ export const tutorSystem = 'Bạn là gia sư ngữ pháp tiếng Anh cho lập 
 async function hash(value: string): Promise<string> {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)))).map(x => x.toString(16).padStart(2, '0')).join('');
 }
+/** Cooldown rows are keyed by key/model fingerprints; a changed key or model never reads its old row again. */
+export async function pruneCooldowns(now = Date.now()): Promise<void> {
+  const tx = (await db).transaction('meta', 'readwrite');
+  let cursor = await tx.store.openCursor(IDBKeyRange.bound('aiCooldown:', 'aiCooldown:￿'));
+  while (cursor) { if (!(Number(cursor.value.value) > now)) await cursor.delete(); cursor = await cursor.continue(); }
+  await tx.done;
+}
 export class StructuredClient {
   constructor(private routes: AIRoute[], private fallback = true, private cooldowns = true) {}
   async request<T>(task: string, data: unknown, schema: z.ZodType<T>, cacheable = true, validate?: (value: T) => T, purpose: Usage['task'] = 'analysis', deadline = Date.now() + 65000): Promise<T> {

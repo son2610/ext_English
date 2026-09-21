@@ -1,8 +1,19 @@
 import type { Assessment } from '../domain/enrichment';
 import type { ErrorCategory } from '../domain/error-categories';
-import type { Grade } from '../domain/models';
+import type { Capture, Grade } from '../domain/models';
+import { dictationText } from '../shared/source-text';
 
 export function tokens(text: string): string[] { return text.toLowerCase().replace(/[’‘]/g, "'").match(/[a-z]+(?:'[a-z]+)?|\d+/g) ?? []; }
+/** Dictation turns in automatically only for passages short enough to hold in memory after one listen. */
+export const DICTATION_AUTO_WORDS = 40;
+/** alignDictation refuses longer passages; a learner may still choose dictation up to this size. */
+export const DICTATION_MAX_WORDS = 300;
+/** A video clip must match its audio. A long web selection falls back to the lesson's quoted evidence. */
+export function dictationPassage(capture: Capture | undefined, evidence: string): string {
+  if (!capture) return evidence;
+  const full = dictationText(capture);
+  return capture.source.video || tokens(full).length <= DICTATION_AUTO_WORDS || !tokens(evidence).length ? full : evidence;
+}
 const articles = new Set(['a', 'an', 'the']);
 const prepositions = new Set(['in', 'on', 'at', 'by', 'for', 'from', 'of', 'to', 'with', 'into', 'about', 'over']);
 const auxiliary = new Set(['do', 'does', 'did', 'can', 'could', 'will', 'would', 'should', 'must', 'may', 'might', 'not', "don't", "doesn't", "didn't"]);
@@ -19,8 +30,8 @@ export function classifyError(original: string, correction: string): ErrorCatego
 }
 export interface Alignment { expected: string; actual: string; kind: 'equal' | 'missing' | 'extra' | 'replace' }
 export function alignDictation(expected: string, actual: string): Alignment[] {
-  if (tokens(expected).length > 300 || tokens(actual).length > 300) throw new Error('Bài nghe chép chính tả giới hạn 300 từ. Hãy chọn đoạn ngắn hơn.');
-  const a = tokens(expected).slice(0, 300), b = tokens(actual).slice(0, 300);
+  if (tokens(expected).length > DICTATION_MAX_WORDS || tokens(actual).length > DICTATION_MAX_WORDS) throw new Error('Bài nghe chép chính tả giới hạn 300 từ. Hãy chọn đoạn ngắn hơn.');
+  const a = tokens(expected), b = tokens(actual);
   const costs = Array.from({ length: a.length + 1 }, () => new Uint16Array(b.length + 1));
   for (let i = 0; i <= a.length; i++) costs[i]![0] = i;
   for (let j = 0; j <= b.length; j++) costs[0]![j] = j;

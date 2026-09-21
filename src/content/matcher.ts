@@ -25,7 +25,9 @@ export class AhoCorasick {
       const text = fold(pattern.text.trim());
       if (text.length < 2 || text.length > 100) continue;
       let state = 0;
-      for (const c of text) {
+      // UTF-16 units, exactly as search() walks the page text; code points would miss non-BMP patterns.
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i]!;
         let next = this.nodes[state]!.next.get(c);
         if (next === undefined) { next = this.nodes.length; this.nodes[state]!.next.set(c, next); this.nodes.push({ next: new Map(), fail: 0, output: [] }); }
         state = next;

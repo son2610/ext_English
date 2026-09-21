@@ -1,4 +1,14 @@
-# Nghiệm thu bản 0.5.1 — LumaRead
+# Nghiệm thu bản 0.5.2 — LumaRead
+
+Kiểm tra ngày **21/09/2026** trên Windows, Node.js **22.13.1**, Chromium **149.0.7827.55**, hồ sơ thử riêng: TypeScript strict, build, kiểm tra UTF-8 64 file và **159/159 unit tests** đạt. Có 14 kiểm thử hồi quy mới trong `tests/regressions.test.ts` cho các lỗi đã sửa: bài tạo từ ghi chú khi ôn, chọn đoạn nghe chép, ký tự `$` trong đáp án, emoji trong bộ nhận diện, giữ tham số FSRS khi lưu cài đặt, hàng đợi AI (`enqueue`/`claimJob`), leech và báo lỗi, sẵn sàng của nhà cung cấp khi tắt dự phòng, dọn cooldown, thống kê một lượt duyệt. Danh sách lỗi và cách sửa: [bản đồ dự án, mục 8](PROJECT-CONTEXT.vi.md).
+
+Sáu bộ E2E chạy lại trên dist **0.5.2** và đều đạt: [capture/ôn tập](../test-results/e2e-report.json) **14**, [YouTube/học bổ sung](../test-results/enrichment-e2e-report.json) **26**, [Gemini](../test-results/gemini-e2e-report.json) **5**, [thư viện](../test-results/organization-e2e-report.json) **10**, [AI dự phòng](../test-results/ai-fallback-e2e-report.json) **11**, [Lab](../test-results/lab-e2e-report.json) **18**. Tổng **84 kiểm tra**. Thư viện 5.000 câu, CPU chậm 4×: tải 1.611 ms, tìm 377 ms, mở chi tiết 246 ms (gồm thao tác Playwright).
+
+**Font tiếng Việt trong ô trả lời:** đo bằng `CSS.getPlatformFontsForNode` trên trang Ôn tập thật. Trước khi sửa, chuỗi "Thử viết bằng tiếng Anh…" bị Georgia vẽ gần hết (tách dấu thành "viê´t"). Sau khi sửa: placeholder dùng Noto Sans đóng gói; câu tiếng Anh vẫn 100% Georgia (chữ gõ trong ô vẫn là Georgia Bold như cũ); chữ Việt lẫn trong câu tiếng Anh do Times New Roman vẽ. Ảnh store `03-review` được chụp lại và không còn lỗi.
+
+**Giới hạn:** API AI và trang YouTube trong kiểm thử là fixture, không dùng khóa thật. Giao diện chèn vào trang web/YouTube (shadow DOM) vẫn dùng Georgia cho câu tiếng Anh. Không đổi quyền Chrome, IndexedDB v3 hay định dạng backup v3.
+
+## Lịch sử nghiệm thu 0.5.1
 
 Kiểm tra ngày **18/09/2026**: TypeScript strict, build, kiểm tra UTF-8 64 file và **145/145 unit tests** đạt. Bổ sung 11 kiểm thử lịch lặp vô hạn và 1 kiểm thử backup Lab cũ không có `repeat`; export/import kiểm tra cả `repeat=true`.
 

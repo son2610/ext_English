@@ -1,9 +1,10 @@
 import { ContentMessageSchema, type Reply } from '../shared/messages';
-import { capture, claimJob, completeJob, encounter, settings } from '../data/repository';
+import { capture, claimJob, completeJob, encounter, MAX_ATTEMPTS, settings } from '../data/repository';
 import { db } from '../data/db';
 import { snapshot } from '../data/backup';
 import { AIError } from '../ai/provider';
 import { getProvider, hasConfiguredProvider } from '../ai/factory';
+import { pruneCooldowns } from '../ai/structured-client';
 import { z } from 'zod';
 import { videoMessage, openVideoClip } from './video';
 import { expandInflections } from '../learning/inflections';
@@ -12,21 +13,26 @@ import { expandInflections } from '../learning/inflections';
 const secureStorage = chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 const uiUrl = chrome.runtime.getURL('app.html');
 let pumping = false;
+// Still strictly one request chain at a time; a small batch per wake-up shortens long video batches.
+const JOBS_PER_PUMP = 3;
 async function pump() {
   if (pumping) return;
   pumping = true;
   try {
     await secureStorage;
-    if (!await hasConfiguredProvider()) return;
-    const job = await claimJob();
-    if (!job) return;
-    try {
-      const provider = await getProvider();
-      await completeJob(job, await provider.analyze(job.source, job.note));
-    } catch (error) {
-      const retryable = error instanceof AIError && error.retryable && job.attempts < 4;
-      const delay = Math.max(error instanceof AIError ? error.retryAfterMs : 0, 60000 * 2 ** (job.attempts - 1)) + Math.random() * 10000;
-      await completeJob(job, { error: error instanceof AIError ? error.message : 'Kết quả AI không hợp lệ. Hãy thử phân tích lại.', retryAt: retryable ? Date.now() + delay : undefined });
+    for (let processed = 0; processed < JOBS_PER_PUMP; processed++) {
+      if (!await hasConfiguredProvider()) return;
+      const job = await claimJob();
+      if (!job) return;
+      try {
+        const provider = await getProvider();
+        await completeJob(job, await provider.analyze(job.source, job.note));
+      } catch (error) {
+        const retryable = error instanceof AIError && error.retryable && job.attempts < MAX_ATTEMPTS;
+        const delay = Math.max(error instanceof AIError ? error.retryAfterMs : 0, 60000 * 2 ** (job.attempts - 1)) + Math.random() * 10000;
+        await completeJob(job, { error: error instanceof AIError ? error.message : 'Kết quả AI không hợp lệ. Hãy thử phân tích lại.', retryAt: retryable ? Date.now() + delay : undefined });
+        return; // After a failure, wait for the next alarm instead of pressing a struggling provider.
+      }
     }
   } finally { pumping = false; }
 }
@@ -46,11 +52,12 @@ async function backupIfDue() {
   const lastDownload = Number((await database.get('meta', 'lastBackupDownload'))?.value ?? 0);
   if (await database.count('captures') && Date.now() - lastDownload > config.backupDays * 86400000) await downloadBackup();
 }
-async function downloadBackup() {
+/** Returns false when another backup download still holds the lease. */
+async function downloadBackup(): Promise<boolean> {
   const database = await db;
   const lease = database.transaction('meta', 'readwrite');
   const pending = Number((await lease.store.get('backupLeaseUntil'))?.value ?? 0);
-  if (pending > Date.now()) { await lease.done; return; }
+  if (pending > Date.now()) { await lease.done; return false; }
   await lease.store.put({ key: 'backupLeaseUntil', value: Date.now() + 600000 }); await lease.done;
   let blobUrl: string | undefined;
   try {
@@ -63,6 +70,7 @@ async function downloadBackup() {
     // Tiny local blobs can finish before the download ID is persisted. Reconcile that race.
     const [item] = await chrome.downloads.search({ id });
     if (item?.state === 'complete' || item?.state === 'interrupted') await settleDownload(id, item.state);
+    return true;
   } catch (error) {
     await database.delete('meta', 'backupLeaseUntil');
     if (blobUrl) await chrome.runtime.sendMessage({ target: 'offscreen', type: 'revoke', url: blobUrl }).catch(() => undefined);
@@ -90,7 +98,7 @@ async function initialize() {
 chrome.runtime.onInstalled.addListener(() => { void initialize(); });
 chrome.runtime.onStartup.addListener(() => { void initialize(); });
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'maintenance') void Promise.allSettled([pump(), badge(), backupIfDue()]);
+  if (alarm.name === 'maintenance') void Promise.allSettled([pump(), badge(), backupIfDue(), pruneCooldowns()]);
 });
 chrome.action.onClicked.addListener(tab => {
   if (tab.id) void chrome.tabs.sendMessage(tab.id, { type: 'capture-video' }).then(reply => { if (!reply?.handled) void chrome.tabs.create({ url: uiUrl }); }, () => chrome.tabs.create({ url: uiUrl }));
@@ -110,7 +118,10 @@ chrome.runtime.onMessage.addListener((raw: unknown, sender, respond: (reply: Rep
     if (trustedUI) {
       if ('type' in raw && raw.type === 'play-source' && 'video' in raw) { await openVideoClip(raw.video, 'blind' in raw && raw.blind === true); return null; }
       const message = z.object({ type: z.enum(['wake', 'backup-now', 'settings-changed', 'library-changed']) }).parse(raw);
-      if (message.type === 'backup-now') { await snapshot(); await downloadBackup(); }
+      if (message.type === 'backup-now') {
+        await snapshot();
+        if (!await downloadBackup()) throw new Error('Đã tạo bản chụp trên máy. Một lượt tải file sao lưu trước vẫn đang chạy; hãy kiểm tra Downloads/MachDoc hoặc thử lại sau vài phút.');
+      }
       if (message.type === 'wake') { void pump(); await badge(); }
       if (message.type === 'settings-changed' || message.type === 'library-changed') {
         const tabs = await chrome.tabs.query({});

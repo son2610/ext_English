@@ -184,9 +184,6 @@ chrome.runtime.onMessage.addListener((raw: unknown, sender, respond) => {
   if (sender.id !== chrome.runtime.id || !raw || typeof raw !== 'object' || !('type' in raw)) return false;
   if (raw.type === 'capture-video') { refresh(); if (session && (window === window.top || !session.video.paused || document.hasFocus())) { void captureRecent().then(handled => respond({ handled })); return true; } }
   if (raw.type === 'video-notes-changed') { void readNotes(true); }
-  if (raw.type === 'play-video-clip' && 'videoId' in raw && session?.id === raw.videoId && 'start' in raw && 'end' in raw && typeof raw.start === 'number' && typeof raw.end === 'number') {
-    startClip(raw.start, raw.end); respond({ handled: true });
-  }
   return false;
 });
 window.addEventListener('yt-navigate-finish', refresh); window.addEventListener('popstate', refresh);

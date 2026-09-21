@@ -1,16 +1,20 @@
-# Phòng Lab — LumaRead 0.5.1
+# Phòng Lab — LumaRead 0.6.0
 
 Mở **Phòng Lab** ở thanh điều hướng. Chọn cách luyện, nguồn nội dung, số mục và nhịp hiển thị rồi bấm **Bắt đầu lượt luyện**. Lab dùng thư viện hiện có, không gọi AI để tạo hay chấm bài.
 
-## Ba cách luyện
+## Năm cách luyện
 
 | Cách luyện | Cách hoạt động | Thiết lập |
 | --- | --- | --- |
 | Lướt nhanh | Hiện tiếng Anh ở trên, nghĩa tiếng Việt ở dưới; tự chuyển sang mục tiếp theo. | 0,6–10 giây/mục. Bật **Ẩn nghĩa để tự đoán** để nghĩa chỉ xuất hiện ở nửa sau thời gian hiển thị. |
 | Bong bóng | Bảng ô màu vuông. Các thẻ xuất hiện lệch nhịp ở vị trí được xáo trộn, hiện tiếng Anh, xoay 180° sang nghĩa, mờ đi rồi nhường chỗ cho thẻ khác. | Bảng 2 × 2, 3 × 3 hoặc 4 × 4; 0,6–10 giây/mặt, thêm 0,24 giây cho pha biến mất. |
 | Điền khuyết | Tự gõ từ/cụm còn thiếu trong câu đã lưu, xem đáp án và chuyển câu bằng nút hoặc Enter. | Không giới hạn thời gian; chỉ dùng bài đã có một chỗ trống và đáp án khớp ngữ cảnh gốc. |
+| Ghép cặp | Bảng ô tiếng Anh (EN) và nghĩa tiếng Việt (VI) xáo trộn. Chọn một ô EN rồi ô VI của nó; cặp đúng biến mất, cặp nhầm rung đỏ. Hết bảng tự sang bảng tiếp theo. | 4, 6 hoặc 8 cặp mỗi bảng; đồng hồ tính tổng thời gian (0,1 giây); không giới hạn thời gian. |
+| Trắc nghiệm | Một đề và tối đa 4 đáp án; đáp án nhiễu lấy từ chính thư viện của bạn. Chọn bằng chuột hoặc phím 1–4, xem đáp án rồi chuyển câu. | Chiều hỏi: Anh → chọn nghĩa Việt, Việt → chọn tiếng Anh, hoặc trộn ngẫu nhiên từng câu. |
 
 Lướt nhanh và bong bóng giúp gặp lại nội dung, nhưng việc vừa nhìn đã thấy quen chưa chứng minh rằng bạn tự nhớ được. Vì vậy Lab không tự cập nhật FSRS, tỉ lệ nhớ, chuỗi ngày học hoặc lịch sử ôn. Dùng **Ôn đúng hạn** để luyện có đánh giá và cập nhật lịch. Không có cam kết rằng tốc độ càng nhanh thì học càng tốt; bắt đầu khoảng 2 giây với cụm ngắn, tăng thời gian khi dùng câu dài.
+
+**Ghép cặp và Trắc nghiệm** chỉ dùng mục ngắn (tối đa 120 ký tự tiếng Anh và 160 ký tự nghĩa) để ô và đáp án còn đọc được; câu dài vẫn luyện bằng Lướt nhanh, Bong bóng hoặc Điền khuyết. Ghép cặp cần ít nhất 2 mục mỗi lượt; một bảng không bao giờ có hai ô trùng chữ (bỏ qua hoa/thường, dấu câu hai đầu). Ghép nhầm đánh dấu cả hai mục để luyện lại; kết quả ghi số cặp ghép đúng ngay lần đầu và số lần nhầm. Trắc nghiệm cần thư viện có ít nhất 2 mục ngắn; đáp án nhiễu ưu tiên cùng loại (câu, cụm từ, ngữ pháp) và độ dài gần nhau, không bao giờ trùng chữ với đáp án đúng hoặc là một mục khác có cùng đề. Đáp án nhiễu là nội dung thật của bạn nên có thể gần nghĩa: đó là mục đích phân biệt, không phải lỗi. Ở chiều Việt → Anh, nút nghe tiếng Anh chỉ hiện sau khi chọn để không lộ đáp án.
 
 Điền khuyết đối chiếu với đáp án đã lưu: bỏ qua hoa/thường, khoảng trắng và một số dấu câu ở hai đầu; vẫn phân biệt dấu câu bên trong từ. Câu trả lời đồng nghĩa khác đáp án có thể bị đánh dấu cần xem lại. Đây là đối chiếu cục bộ, không chấm ngữ nghĩa bằng AI.
 
@@ -32,7 +36,7 @@ Chỉ câu có bản nghĩa hoặc ghi chú mới được đưa vào Lab. Nếu
 
 `src/domain/lab.ts` chuẩn hóa nội dung, lọc và chọn bộ thẻ một lần. `src/domain/lab-timeline.ts` là lịch hiển thị thuần, độc lập với React; `src/ui/lab.tsx` quản lý lượt luyện; `src/ui/lab.css` quản lý chuyển động. `saveLabPreferences` trong repository lưu riêng thiết lập, dùng transaction để giữ cấu hình AI và các cài đặt khác mới nhất.
 
-Thiết lập nằm trong `Settings.lab` (IndexedDB meta). Bản export v3 chứa thiết lập này; không cần đổi phiên bản DB. Backup cũ không có Lab vẫn nhập được. Nội dung lượt, câu trả lời điền khuyết và dấu luyện lại nằm trong bộ nhớ, mất khi rời trang/tải lại; chúng không được thêm vào lịch sử ôn chính.
+Thiết lập nằm trong `Settings.lab` (IndexedDB meta); 0.6.0 thêm `direction` cho Trắc nghiệm, mặc định `en-vi` với dữ liệu cũ. Logic trò chơi thuần ở `src/domain/lab-games.ts` (`buildChoiceQuestion`, `buildMatchRounds`), giao diện ở `src/ui/lab-games.tsx`. Bản export v3 chứa thiết lập này; không cần đổi phiên bản DB. Backup cũ không có Lab vẫn nhập được. Nội dung lượt, câu trả lời điền khuyết và dấu luyện lại nằm trong bộ nhớ, mất khi rời trang/tải lại; chúng không được thêm vào lịch sử ôn chính.
 
 | Lựa chọn | Phương án khác và đánh đổi |
 | --- | --- |

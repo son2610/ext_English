@@ -1,6 +1,6 @@
 # LumaRead — Bản đồ ngữ cảnh dự án
 
-> Cập nhật **21/09/2026**, theo mã nguồn **v0.5.2** (quét ở v0.5.1 commit `1a09d56`, rồi sửa lỗi ở mục 8). Tài liệu gom toàn bộ hiểu biết về project để tiếp tục phát triển mà không phải đọc lại từ đầu. Khi code đổi, cập nhật mục liên quan và mục **8. Lỗi đã phát hiện**.
+> Cập nhật **21/09/2026**, theo mã nguồn **v0.6.0** (quét ở v0.5.1 commit `1a09d56`; 0.5.2 sửa lỗi ở mục 8; 0.6.0 thêm popup Ôn 30 giây và 2 trò chơi Lab). Tài liệu gom toàn bộ hiểu biết về project để tiếp tục phát triển mà không phải đọc lại từ đầu. Khi code đổi, cập nhật mục liên quan và mục **8. Lỗi đã phát hiện**.
 >
 > Tài liệu thiết kế gốc theo từng phiên bản vẫn nằm ở `docs/*.vi.md` (ARCHITECTURE 0.1, EXTENSIONS 0.2, LIBRARY 0.3, AI-PROVIDERS 0.4, LAB 0.5, DATA, VALIDATION). File này là bản tổng hợp hiện hành.
 
@@ -22,10 +22,10 @@
 | --- | --- |
 | `npm ci` | Cài phụ thuộc. Windows lỗi `EPERM`: `node --preserve-symlinks-main 'C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js' ci --cache .npm-cache` |
 | `npm run typecheck` | `tsc --noEmit` (gồm `src` và `tests`) |
-| `npm test` | Vitest, 12 file, **159 test** (21/09/2026 sau đợt sửa lỗi: tất cả pass, tsc sạch) |
+| `npm test` | Vitest, 13 file, **169 test** (21/09/2026, bản 0.6.0: tất cả pass, tsc sạch) |
 | `npm run build` | typecheck + `scripts/build.mjs` → `dist/` |
 | `npm run dev` | esbuild watch (không minify). Sửa manifest/HTML phải build lại |
-| `npm run test:e2e` | 6 bộ Playwright: `e2e`, `e2e-enrichment`, `e2e-gemini`, `e2e-organization`, `e2e-ai-fallback`, `e2e-lab`. Cần `dist/` đã build. `CHROMIUM_PATH` tùy chọn. Kết quả/ảnh ở `test-results/` |
+| `npm run test:e2e` | 7 bộ Playwright: `e2e`, `e2e-enrichment`, `e2e-gemini`, `e2e-organization`, `e2e-ai-fallback`, `e2e-lab`, `e2e-popup`. Cần `dist/` đã build. `CHROMIUM_PATH` tùy chọn. Kết quả/ảnh ở `test-results/` |
 | `npm run check:text` | Quét UTF-8/mojibake trong `src` + `public`, giới hạn tên ≤75/mô tả ≤132 ký tự của manifest, version manifest = package.json, kích thước PNG icon |
 | `node scripts/performance.mjs` | Đo highlight 3.000 unit trên trang dài, CPU throttle |
 | `node scripts/schema.mjs` | Sinh `docs/*.schema.json` từ Zod (không sửa tay) |
@@ -35,7 +35,7 @@
 Cài: `chrome://extensions` → Developer mode → **Load unpacked** → `dist/`. Sau mỗi build: Reload extension, tải lại tab app và trang đọc. Node 22+, Chrome ≥ 120.
 
 **build.mjs:** copy `public/` → `dist/`; ghi manifest (xoá `chrome_url_overrides` nếu `NO_NEW_TAB=1`); tạo `THIRD_PARTY_NOTICES.txt`; bundle:
-- ESM: `app` (`src/ui/app.tsx`), `background`, `offscreen`, `video-editor`, `optimizer` (worker).
+- ESM: `app` (`src/ui/app.tsx`), `popup` (`src/ui/popup.tsx`), `background`, `offscreen`, `video-editor`, `optimizer` (worker).
 - IIFE: `content` (`src/content/index.ts`), `video` (`src/video/index.ts`), `video-main` (`src/video/main.ts`).
 - target `chrome120`, sourcemap, minify trừ khi `--watch`, `external: ['./fonts/*']`.
 
@@ -54,6 +54,7 @@ src/domain/        Schema Zod + logic thuần (không I/O)
   organization.ts    6 màu, Organizer, Organization, searchText() (bỏ dấu tiếng Việt)
   lab.ts             LabPreferences, buildLabCards / filterLabCards / sampleLabCards, checkLabAnswer
   lab-timeline.ts    Lịch hiển thị thuần cho Lướt nhanh/Bong bóng, hỗ trợ lặp vô hạn
+  lab-games.ts       Ghép cặp (buildMatchRounds) và Trắc nghiệm (buildChoiceQuestion, đáp án nhiễu từ thư viện)
   error-categories.ts 10 nhóm lỗi + nhãn tiếng Việt
 src/data/          IndexedDB, transaction, invariant
   db.ts              openDB('mach-doc', 3) + nâng cấp v1→v2→v3
@@ -102,13 +103,15 @@ src/ui/            React, tiếng Việt
   app.tsx            Khung app + router hash, Home, CaptureCard, ReviewPanel, trang Cần chăm sóc, SettingsPanel
   library.tsx        Thư viện; library-index.ts (chỉ mục/lọc), library-management.tsx (sửa/xoá),
                      organizer-manager.tsx (nhóm/nhãn), modal.tsx (dialog)
-  lab.tsx            Phòng Lab (thiết lập + LabSession)
+  lab.tsx            Phòng Lab (thiết lập + LabSession); lab-games.tsx: MatchStage, ChoiceStage
+  popup.tsx          Popup icon toolbar "Ôn 30 giây" (+ nút lưu câu YouTube); popup.css
+  review-queue.ts    reviewQueue()/dueIn() dùng chung cho trang Ôn tập và popup
   insights.tsx       Hồ sơ & lộ trình
   learning-tools.tsx BudgetNotice, OriginalAudio, TranscriptCheck, UnitTools, AdvancedSettings
   ai-settings.tsx    Nhà cung cấp AI & dự phòng
   stats.ts           Thống kê từ review log
   *.css              style, typography, library, library-management, enrichment, lab, ai-settings (chỉ theme sáng)
-public/            manifest.json, app.html, offscreen.html, privacy.html, icons/, fonts/ (Noto Sans, OFL),
+public/            manifest.json, app.html, popup.html, offscreen.html, privacy.html, icons/, fonts/ (Noto Sans, OFL),
                    data/en-frequency.txt (FrequencyWords, CC BY-SA 4.0) + ATTRIBUTION.md
 tests/             Vitest (fake-indexeddb); fixtures.ts dùng chung cho E2E
 scripts/           build, e2e*, check-text, package.ps1, schema, store-assets, prepare-brand, performance
@@ -135,6 +138,9 @@ app.html (tab mới / options #settings / #review …) — React
   • Gọi AI TRỰC TIẾP cho grade / explain / targeted / weekly / kiểm tra kết nối
   • send() tới worker: wake, backup-now, settings-changed, library-changed, play-source
   • Tạo Web Worker optimizer.js để hiệu chỉnh FSRS
+popup.html (icon toolbar, action.default_popup) — React, cùng quyền như app.html
+  • Đọc IDB, recordReview trực tiếp; send('wake') để cập nhật badge/hàng đợi
+  • Trên tab YouTube: chrome.tabs.sendMessage(capture-video) rồi tự đóng
 offscreen.html — chỉ tạo Blob JSON cho sao lưu tải xuống
 ```
 
@@ -149,13 +155,13 @@ Chỉ **phân tích capture** chạy nền trong service worker (hàng đợi). 
 | content → SW | `lexicon` | Trả pattern cụm từ (≤3.000 unit, + biến thể) nếu bật highlight |
 | content → SW | `encounter {unitIds ≤100}` | Ghi lần gặp khi đọc |
 | video → SW | `video-open-editor`, `video-fetch-track`, `video-notes`, `video-ready`, `video-release-batch`, `video-open-library` | Luôn kèm `pageUrl`, SW kiểm tra cùng origin với sender và `videoId` khớp URL |
-| UI → SW | `wake`, `backup-now`, `settings-changed`, `library-changed`, `play-source {video, blind}` | Chỉ nhận khi `sender.url` bắt đầu bằng `app.html` |
+| UI → SW | `wake`, `backup-now`, `settings-changed`, `library-changed`, `play-source {video, blind}` | Chỉ nhận khi `sender.url` bắt đầu bằng `app.html` hoặc `popup.html` |
 | SW → tab | `show-editor`, `show-video-editor`, `quick-capture`, `capture-video` (trả `{handled}`), `refresh-highlights`, `video-notes-changed` | |
 | SW → offscreen | `{target:'offscreen', type:'backup-blob' \| 'revoke'}` | |
 
 Mọi message từ content đều qua `ContentMessageSchema` (Zod). Worker từ chối nguồn không phải tab của extension hoặc trang app.
 
-**Phím tắt (manifest commands):** `Alt+Shift+S` lưu nhanh (không AI) · `Alt+Shift+R` mở `#review` · `Alt+Shift+Y` lưu câu YouTube. **Icon toolbar:** gửi `capture-video`; không có tab xử lý → mở app.
+**Phím tắt (manifest commands):** `Alt+Shift+S` lưu nhanh (không AI) · `Alt+Shift+R` mở `#review` · `Alt+Shift+Y` lưu câu YouTube. **Icon toolbar:** mở `popup.html` (từ 0.6.0; vì có popup nên `action.onClicked` không còn dùng). Trên tab YouTube, popup có nút gửi `capture-video`.
 
 **Quyền:** `storage, alarms, activeTab, unlimitedStorage, offscreen, downloads`; host cố định Gemini, dictionaryapi, YouTube timedtext; `optional_host_permissions: https://*/*` xin khi lưu cấu hình AI. CSP trang extension: `script-src 'self'; connect-src 'self' https:; frame-src https://www.youtube-nocookie.com`.
 
@@ -279,6 +285,7 @@ Sửa exact:    ─► saved, xoá analysis, unitsCreated=false (unit đã tạo
 - `buildLabCards(captures, units)`: thẻ unit (`form` + `meaningVi`; bỏ unit tạm dừng, đã báo lỗi, không còn capture an toàn) và thẻ capture (`exact` + `analysis.meaningVi` hoặc ghi chú, nhãn "Ghi chú của bạn"). Loại transcript video chưa chắc chưa xác nhận. Cloze chỉ khi đúng một blank và khôi phục được trong capture liên quan.
 - `filterLabCards`: nguồn (tất cả / câu / cụm từ / ngữ pháp), tiến độ (tất cả / đến hạn / cần luyện thêm = leech hoặc failures ≥3 hoặc difficulty ≥8), nhóm, nhãn; chế độ cloze bắt buộc có cloze.
 - `sampleLabCards`: Fisher–Yates một phần hoặc mới nhất; `count 0` = tất cả.
+- **Ghép cặp** (`match`) và **Trắc nghiệm** (`choice`) từ 0.6.0: chỉ mục ngắn (`gameReady`: ≤120 ký tự EN, ≤160 ký tự nghĩa). Ghép cặp chia bảng 4/6/8 cặp (`columns` 2/3/4), không để hai ô trùng chữ trong một bảng, đồng hồ 0,1 s, ghép nhầm đánh dấu cả hai mục; cần ≥2 mục/lượt. Trắc nghiệm lấy tối đa 3 đáp án nhiễu từ toàn thư viện (ưu tiên cùng loại, độ dài gần), loại đáp án trùng chữ hoặc mục khác cùng đề; chiều `direction` = en-vi / vi-en / mixed (cố định theo câu khi bắt đầu lượt); phím 1–4; ở vi-en ẩn nút nghe tới khi trả lời; cần thư viện ≥2 mục ngắn.
 - **Chế độ:** *Lướt nhanh* (1 thẻ, `seconds`/mục, ẩn nghĩa → hiện ở nửa sau); *Bong bóng* (bảng 2×2/3×3/4×4, mỗi thẻ mặt Anh → lật 180° sang nghĩa → mờ 240 ms, xuất hiện lệch nhịp, vị trí xáo); *Điền khuyết* (tự gõ, `checkLabAnswer` bỏ qua hoa/thường, khoảng trắng, dấu câu hai đầu).
 - Đồng hồ `performance.now()`, tự tạm dừng khi ẩn tab, Space/Esc, toàn màn hình, TTS, "Muốn gặp lại" (cloze sai tự đánh dấu), luyện lại mục đã đánh dấu, lặp vô hạn (`labPlaybackTimeline`).
 - **Không** ghi Review/Assessment, **không** đổi FSRS. Chỉ lưu `Settings.lab`. Khi phiên Lab đang chạy, App ngừng tự refresh 10 s.
@@ -290,7 +297,7 @@ Sửa exact:    ─► saved, xoá analysis, unitsCreated=false (unit đã tạo
   2. Caption track từ player response (`video-main.js` đọc `#movie_player.getPlayerResponse()` / `ytInitialPlayerResponse`) → SW tải `/api/timedtext` (whitelist host/path/`v`, `fmt=json3`, ≤8 MiB, timeout 12 s, tối đa 3 track tiếng Anh, ưu tiên track thủ công).
   3. Bảng transcript đang mở trên trang (`ytd-transcript-segment-renderer`; mốc kết thúc suy ra, đánh dấu `observed`).
   4. Lịch sử CC hiển thị (`.ytp-caption-segment`, MutationObserver + gom 100 ms, ≤300 cue, mốc ước lượng).
-- **Lưu câu** (`Alt+Shift+Y`, nút **Lưu câu**, hoặc icon toolbar): tạm dừng video → `groupSentences` (khoảng nghỉ ≤1,1 s, cụm ≤16 s, <36 từ, dừng ở dấu câu, bỏ phần trùng của caption cuộn) → `recentSentences` (≤8 câu trong 50 s gần nhất, ưu tiên câu vừa kết thúc ≤8 s) → hộp chọn trong frame gốc: chọn **một** câu, sửa câu/từ (giữ `originalExact`), xác nhận ngôn ngữ, ghi chú, "phân tích sau" (mặc định bật) → capture `saved + deferredAnalysis`.
+- **Lưu câu** (`Alt+Shift+Y`, nút **Lưu câu** trên panel, hoặc nút **Lưu câu vừa nghe** trong popup icon toolbar): tạm dừng video → `groupSentences` (khoảng nghỉ ≤1,1 s, cụm ≤16 s, <36 từ, dừng ở dấu câu, bỏ phần trùng của caption cuộn) → `recentSentences` (≤8 câu trong 50 s gần nhất, ưu tiên câu vừa kết thúc ≤8 s) → hộp chọn trong frame gốc: chọn **một** câu, sửa câu/từ (giữ `originalExact`), xác nhận ngôn ngữ, ghi chú, "phân tích sau" (mặc định bật) → capture `saved + deferredAnalysis`.
 - **Panel LumaRead** chèn vào `#secondary` (hoặc cố định góc phải): danh sách note theo thời gian, timeline, marker trên thanh tiến trình, note trước/sau, **Luyện lại các đoạn** (lặp 1/2/3/5 lần, tốc độ 0,5–1,5×, ẩn CC lần đầu), mở thư viện. Hết video → banner **Phân tích lô câu đã chọn** (`video-release-batch`).
 - **Nghe lại khi ôn:** iframe `youtube-nocookie` với `start/end` (làm tròn giây), tham số `md-review=1` (không gắn panel), `md-blind=1` (ẩn CC cho nghe chép). Bị chặn nhúng (lỗi 153) → **Mở đoạn trên YouTube**: tab mới + `storage.session` → `video-ready` → seek chính xác, dừng ở `end`.
 - **Giới hạn quan trọng:** hiện **chưa có tính năng trích xuất và lưu toàn bộ transcript**. Transcript tải về chỉ nằm trong bộ nhớ tab để chọn câu gần đây; chỉ câu được chọn mới được lưu. Việc lấy timedtext phụ thuộc API nội bộ của YouTube.
@@ -348,9 +355,10 @@ Lexicon = unit `phrase` (≤3.000, + biến thể ≤12.000) → Aho-Corasick d�
 | `tests/organization.test.ts` (7) | Nhóm/nhãn, hàng loạt, import/export, tìm không dấu |
 | `tests/lab*.test.ts` (12 + 22 + 10) | Bộ thẻ, lọc, lấy mẫu, đối chiếu đáp án, timeline, lặp, thiết lập & backup |
 | `tests/migration*.test.ts` (1 + 1) | Nâng DB v1 → v3, v2 → v3 thật |
+| `tests/lab-games.test.ts` (10) | Trắc nghiệm (đáp án đúng đúng một lần, không đáp án nhiễu hợp lệ, cùng loại), chia bảng ghép cặp, lọc mục ngắn, thiết lập mới, `reviewQueue`/`dueIn` dùng chung |
 | `tests/regressions.test.ts` (14) | Hồi quy cho B1–B12: bài thủ công khi ôn, đoạn nghe chép, `$` trong đáp án, emoji trong matcher, giữ `fsrsWeights`, `enqueue`/`claimJob`, leech/báo lỗi, sẵn sàng provider, dọn cooldown, thống kê |
 
-E2E dùng extension thật trong Chromium headless, trang/API giả lập (không dùng khóa thật), profile riêng trong `test-results/`. Ma trận nghiệm thu từng phiên bản: `docs/VALIDATION.vi.md`.
+E2E dùng extension thật trong Chromium headless, trang/API giả lập (không dùng khóa thật), profile riêng trong `test-results/`. `e2e-popup` mở `popup.html` như một trang (headless không bấm được icon toolbar): cùng mục kế tiếp với trang Ôn tập, gõ → Ctrl+Enter → chấm, Enter không chấm nhầm, badge cập nhật, xem đáp án trước = Chưa nhớ, bỏ qua không đổi lịch. `e2e-lab` có thêm Ghép cặp và Trắc nghiệm. Ma trận nghiệm thu từng phiên bản: `docs/VALIDATION.vi.md`.
 
 ---
 
@@ -383,10 +391,10 @@ Phát hiện khi quét ngày 21/09/2026; **B1–B12, F1 và phần an toàn củ
 
 Gợi ý cho giai đoạn tiếp theo, bám theo 5 trụ cột:
 
-1. **Lưu từ/câu:** menu chuột phải "Lưu vào LumaRead", popup mini từ icon, tra nghĩa nhanh khi chọn từ (không cần lưu), lưu nhanh kèm tự đoán nghĩa.
+1. **Lưu từ/câu:** menu chuột phải "Lưu vào LumaRead", tra nghĩa nhanh khi chọn từ (không cần lưu), lưu nhanh kèm tự đoán nghĩa.
 2. **Ôn luyện:** phím tắt 1–4/Enter trong phiên ôn, luyện nói bằng SpeechRecognition, bury sibling (tránh hai bài cùng capture trong một ngày), mục tiêu ngày + nhắc nhở, heatmap cả năm.
 3. **AI:** chat gia sư hỏi đáp tự do theo câu/bài (có ngữ cảnh capture), "Thêm ví dụ" theo yêu cầu, sinh bài tập đa dạng (trắc nghiệm, sắp xếp từ, chọn giới từ, dịch ngược), giải thích lỗi chi tiết; adapter **Anthropic Claude** (Messages API) và model local (Ollama).
-4. **Lab:** ghép cặp Anh–Việt, nghe rồi chọn nghĩa, gõ nhanh chính tả, lật thẻ thủ công, chế độ sinh tồn có điểm/combo/âm thanh.
+4. **Lab:** (đã có ghép cặp, trắc nghiệm từ 0.6.0) nghe rồi chọn nghĩa, gõ nhanh chính tả, lật thẻ thủ công, chế độ sinh tồn có điểm/combo/âm thanh.
 5. **YouTube transcript:** **trích xuất toàn bộ transcript và lưu lại** (xem, tìm, bấm câu để nhảy/lưu, lưu nhiều câu một lần, xuất .txt/.srt), phụ đề song ngữ, lưu nhiều câu trong một hộp thoại.
 6. **Dữ liệu/UI:** xuất Anki/CSV, dark mode, sync tùy chọn (Drive), xoá hàng loạt trong thư viện.
 

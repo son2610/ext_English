@@ -1,0 +1,56 @@
+/* Toolbar popup: one card, same colors as the app. typography.css supplies the bundled fonts. */
+*{box-sizing:border-box}
+body{margin:0;width:380px;background:#faf9f6;color:#293b34;font:14px/1.6 'Luma Sans','Segoe UI',Tahoma,system-ui,sans-serif}
+button,textarea{font:inherit}
+button{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:1px solid #d8dfd4;border-radius:8px;background:#fff;color:#354c40;font-size:12px;font-weight:550}
+button:not(:disabled):hover{background:#edf0e7}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{color:#fff;background:#285747;border-color:#285747}
+button.primary:not(:disabled):hover{background:#1c4436}
+button:focus-visible,textarea:focus-visible{outline:3px solid #c5ac66;outline-offset:2px}
+kbd{display:inline-block;border:1px solid #dbe0d3;background:#f5f6f0;color:#879176;border-radius:4px;padding:1px 5px;font:10px/1.3 system-ui}
+.quick{display:flex;flex-direction:column;gap:12px;padding:14px 16px 12px}
+.quick-top{display:flex;align-items:center;gap:10px}
+.quick-top img{width:28px;height:28px}
+.quick-top div{flex:1;min-width:0}
+.quick-top strong{display:block;font-size:16px;font-weight:600;line-height:1.3}
+.quick-top small{font-size:11px;color:#788079}
+.quick-link{border:0;background:none!important;color:#285747;padding:4px 0;font-size:11px}
+.quick-youtube{display:grid;gap:6px;padding:10px 12px;background:#f1f4e9;border:1px solid #dde5d2;border-radius:10px}
+.quick-youtube small{font-size:11px;color:#6f7b61}
+.quick-youtube p{margin:0;font-size:12px;color:#8a6d3b}
+.quick-card{display:grid;gap:10px;background:#fff;border:1px solid #e7e8df;border-radius:12px;padding:14px}
+.quick-card:focus{outline:none}
+.quick-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;color:#8c967f;letter-spacing:.3px}
+.quick-tag{background:#eaf0e2;color:#658052;border-radius:5px;padding:3px 8px}
+.quick-prompt{margin:0;font-size:17px;line-height:1.55;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere}
+.quick-prompt.english{font-weight:400;font-size:19px}
+.quick-answer-label{display:grid;gap:6px;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:#849374;font-weight:550}
+.quick-answer{width:100%;min-height:78px;resize:vertical;border:1px solid #dbe0d5;border-radius:8px;padding:10px 12px;background:#fff;color:#34472d;font-size:17px;line-height:1.5;text-transform:none;letter-spacing:0}
+.quick-answer::placeholder{font-family:'Luma Sans','Segoe UI',Tahoma,system-ui,sans-serif;font-size:14px}
+.quick-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.quick-text{border:0;background:none!important;color:#7b8a6b;padding:6px 2px;font-size:11px}
+.quick-hint{margin:0;font-size:12px;background:#f8f3e4;color:#9b875b;border-radius:8px;padding:9px 11px}
+.quick-model{display:flex;align-items:center;justify-content:space-between;font-size:9px;letter-spacing:1.2px;color:#8c967f;font-weight:600}
+.quick-sound{border:0;background:#f4f5ef;color:#849274;padding:5px}
+.quick-answer-text{margin:0;font-size:18px;line-height:1.5;color:#4f6940;background:#f3f6eb;border-radius:8px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.quick-yours{margin:0;font-size:12px;color:#6f7b61;overflow-wrap:anywhere}
+.quick-yours .english{font-size:14px;color:#34472d}
+.quick-muted{margin:0;font-size:11px;line-height:1.6;color:#8b9680}
+.quick-ratings{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.quick-rating{flex-direction:column;gap:1px;padding:8px 2px}
+.quick-rating strong{font-size:11px}
+.quick-rating small{font-size:10px}
+.quick-rating kbd{margin-top:3px;padding:0 4px}
+.rating-1{background:#faf0e9;border-color:#edd7c7;color:#b08263}
+.rating-2{background:#faf5e7;border-color:#e8dfbf;color:#a18f53}
+.rating-3{background:#edf3e6;border-color:#d4e1c7;color:#6e8756}
+.rating-4{background:#edf2f5;border-color:#d9e4e9;color:#7e95a0}
+.quick-skip{justify-self:start}
+.quick-empty{display:grid;gap:6px;padding:18px 14px;text-align:center;background:#f5f7ef;border:1px dashed #dce3cf;border-radius:12px;color:#627354}
+.quick-empty strong{font-size:15px}
+.quick-empty p{margin:0;font-size:12px;color:#8d9e7a}
+.quick-empty .quick-actions{justify-content:center;margin-top:6px}
+.quick-error{margin:0;font-size:12px;color:#a5674f}
+.quick-foot{font-size:10px;color:#9aa38c;text-align:center}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}

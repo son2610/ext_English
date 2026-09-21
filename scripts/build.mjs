@@ -13,7 +13,7 @@ for (const dependency of ['idb', 'react', 'react-dom', 'scheduler', 'ts-fsrs', '
 }
 await writeFile('dist/THIRD_PARTY_NOTICES.txt', notices.join('\n\n----------------------------------------\n\n'));
 const entries = [
-  { entryPoints: { app: 'src/ui/app.tsx', background: 'src/background/index.ts', offscreen: 'src/background/offscreen.ts', 'video-editor': 'src/video/editor.ts', optimizer: 'src/learning/optimizer-worker.ts' }, format: 'esm' },
+  { entryPoints: { app: 'src/ui/app.tsx', popup: 'src/ui/popup.tsx', background: 'src/background/index.ts', offscreen: 'src/background/offscreen.ts', 'video-editor': 'src/video/editor.ts', optimizer: 'src/learning/optimizer-worker.ts' }, format: 'esm' },
   { entryPoints: { content: 'src/content/index.ts', video: 'src/video/index.ts', 'video-main': 'src/video/main.ts' }, format: 'iife' },
 ];
 for (const entry of entries) {

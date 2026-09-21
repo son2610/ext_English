@@ -276,6 +276,60 @@ try {
   await app.screenshot({ path: 'test-results/lab-summary.png', fullPage: true });
   checks.push('difficult-phrase-cloze-reveals-correction');
 
+  // Matching board: one deliberate mistake, pause disables the board, every pair resolves, confused pairs are marked.
+  await setup(app); await button(app, 'Ghép cặp').click();
+  await select(app, 'Nguồn nội dung').selectOption('captures'); await select(app, 'Tiến độ').selectOption('all');
+  await select(app, 'Nhóm').selectOption(''); await select(app, 'Nhãn').selectOption('');
+  await select(app, 'Thứ tự').selectOption('newest'); await select(app, 'Số cặp mỗi bảng').selectOption('2');
+  await app.getByLabel('Số mục mỗi lượt', { exact: true }).fill('1');
+  assert.equal(await button(app, 'Bắt đầu lượt luyện').isEnabled(), false, 'A pairing board needs at least two items.');
+  await app.getByLabel('Số mục mỗi lượt', { exact: true }).fill('4');
+  await button(app, 'Bắt đầu lượt luyện').click(); await app.locator('.lab-match-board').waitFor();
+  assert.equal(await app.locator('.lab-match-tile').count(), 8);
+  const pairs = await app.locator('.lab-match-tile[data-side="en"]').evaluateAll(tiles => tiles.map(t => t.dataset.cardId));
+  const tile = (id, side) => app.locator(`.lab-match-tile[data-card-id="${id}"][data-side="${side}"]`);
+  await tile(pairs[0], 'en').click(); await tile(pairs[1], 'vi').click();
+  assert.equal(await app.locator('.lab-match-tile.wrong').count(), 2); assert.equal(await completed(app), 0);
+  await app.screenshot({ path: 'test-results/lab-match-desktop.png', fullPage: true });
+  await pause(app); assert.equal(await tile(pairs[2], 'en').isDisabled(), true); await button(app, 'Tiếp tục').click();
+  await app.setViewportSize({ width: 390, height: 844 }); await noOverflow(app); await app.setViewportSize({ width: 1440, height: 1000 });
+  for (const id of pairs) { await tile(id, 'en').click(); await tile(id, 'vi').click(); }
+  await app.getByTestId('lab-summary').waitFor();
+  const matchSummary = await app.getByTestId('lab-summary').textContent();
+  assert.ok(matchSummary.includes('4 / 4') && matchSummary.includes('2 cặp ghép đúng ngay · 1 lần ghép nhầm'), matchSummary);
+  assert.ok(await button(app, 'Luyện 2 mục đã đánh dấu').isVisible());
+  checks.push('match-board-mistake-pause-complete-and-marks-confused-pairs');
+
+  // Multiple choice: distractors from the library, keyboard answers, feedback, marking and direction.
+  await setup(app); await button(app, 'Trắc nghiệm').click();
+  await select(app, 'Chiều hỏi').selectOption('en-vi'); await app.getByLabel('Số mục mỗi lượt', { exact: true }).fill('3');
+  await button(app, 'Bắt đầu lượt luyện').click(); await app.locator('.lab-choice-stage').waitFor();
+  const options = () => app.locator('.lab-choice-option').evaluateAll(els => els.map(e => e.querySelector('span').textContent));
+  const prompt = () => app.locator('.lab-choice-prompt').textContent();
+  assert.equal(await prompt(), source.exact);
+  let texts = await options(); assert.equal(texts.length, 4); assert.equal(new Set(texts).size, 4);
+  await app.keyboard.press(String(texts.indexOf(analysis.meaningVi) + 1));
+  await app.locator('.lab-cloze-feedback').filter({ hasText: 'Chính xác.' }).waitFor();
+  await app.screenshot({ path: 'test-results/lab-choice-desktop.png', fullPage: true });
+  await button(app, 'Câu tiếp theo').click();
+  assert.equal(await prompt(), 'Your advice would have helped us.');
+  texts = await options(); await app.locator('.lab-choice-option').nth(texts.findIndex(t => t !== 'Lời khuyên của bạn lẽ ra đã giúp chúng tôi.')).click();
+  await app.locator('.lab-cloze-feedback').filter({ hasText: 'Chưa đúng' }).waitFor();
+  assert.ok(await button(app, '★ Đã đánh dấu').isVisible());
+  await button(app, 'Câu tiếp theo').click();
+  texts = await options(); await app.keyboard.press(String(texts.indexOf(demoCards[0][1]) + 1));
+  await button(app, 'Xem kết quả').click(); await app.getByTestId('lab-summary').waitFor();
+  assert.ok((await app.getByTestId('lab-summary').textContent()).includes('2 câu chọn đúng · 1 mục để xem lại'));
+  await setup(app); await select(app, 'Chiều hỏi').selectOption('vi-en'); await app.getByLabel('Số mục mỗi lượt', { exact: true }).fill('1');
+  await button(app, 'Bắt đầu lượt luyện').click(); await app.locator('.lab-choice-stage').waitFor();
+  assert.equal(await prompt(), analysis.meaningVi); assert.ok((await options()).includes(source.exact));
+  assert.equal(await button(app, 'Nghe tiếng Anh').count(), 0, 'Hearing the English first would reveal the answer.');
+  await app.keyboard.press('1'); await button(app, 'Nghe tiếng Anh').waitFor();
+  await app.setViewportSize({ width: 390, height: 844 }); await noOverflow(app);
+  await app.screenshot({ path: 'test-results/lab-choice-mobile.png', fullPage: true }); await app.setViewportSize({ width: 1440, height: 1000 });
+  await button(app, 'Xem kết quả').click(); await app.getByTestId('lab-summary').waitFor();
+  checks.push('choice-library-distractors-keyboard-feedback-marking-and-reverse-direction');
+
   // Instrument browser timer registration, preserving native behavior, to verify unmount cleanup.
   await setup(app); await button(app, 'Lướt nhanh').click();
   await select(app, 'Nguồn nội dung').selectOption('captures'); await select(app, 'Tiến độ').selectOption('all');

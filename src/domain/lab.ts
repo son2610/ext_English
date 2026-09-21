@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import type { Capture, Unit } from './models';
 
-export type LabMode = 'stream' | 'bubbles' | 'cloze';
+export type LabMode = 'stream' | 'bubbles' | 'cloze' | 'match' | 'choice';
 
 export const LabPreferencesSchema = z.object({
-  mode: z.enum(['stream', 'bubbles', 'cloze']).default('stream'),
+  mode: z.enum(['stream', 'bubbles', 'cloze', 'match', 'choice']).default('stream'),
   source: z.enum(['all', 'captures', 'phrases', 'grammar']).default('all'),
   scope: z.enum(['all', 'due', 'difficult']).default('all'),
   groupId: z.string().max(100).default(''),
@@ -15,6 +15,8 @@ export const LabPreferencesSchema = z.object({
   hideMeaning: z.boolean().default(false),
   repeat: z.boolean().default(false),
   columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3),
+  // Multiple choice: English prompt → Vietnamese options, the reverse, or a random mix per question.
+  direction: z.enum(['en-vi', 'vi-en', 'mixed']).default('en-vi'),
 });
 export type LabPreferences = z.infer<typeof LabPreferencesSchema>;
 export const defaultLabPreferences: LabPreferences = LabPreferencesSchema.parse({});
@@ -109,6 +111,13 @@ export function buildLabCards(captures: Capture[], units: Unit[], now = Date.now
   return cards;
 }
 
+/** Match tiles and choice options stay readable; long sentences belong to the stream and cloze modes. */
+export const GAME_TEXT_LIMITS = { english: 120, meaning: 160 } as const;
+export function gameReady(card: LabCard): boolean {
+  return card.english.length <= GAME_TEXT_LIMITS.english && card.meaningVi.length <= GAME_TEXT_LIMITS.meaning;
+}
+export const isGameMode = (mode: LabMode) => mode === 'match' || mode === 'choice';
+
 export function filterLabCards(cards: LabCard[], preferences: LabPreferences): LabCard[] {
   return cards.filter(card =>
     (preferences.source === 'all' ||
@@ -118,7 +127,8 @@ export function filterLabCards(cards: LabCard[], preferences: LabPreferences): L
     (preferences.scope === 'all' || (preferences.scope === 'due' ? card.due : card.difficult)) &&
     (!preferences.groupId || card.groupIds.includes(preferences.groupId)) &&
     (!preferences.labelId || card.labelIds.includes(preferences.labelId)) &&
-    (preferences.mode !== 'cloze' || !!card.cloze),
+    (preferences.mode !== 'cloze' || !!card.cloze) &&
+    (!isGameMode(preferences.mode) || gameReady(card)),
   );
 }
 

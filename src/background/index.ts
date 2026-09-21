@@ -12,6 +12,7 @@ import { expandInflections } from '../learning/inflections';
 // Keys are never placed in content-script messages or exported data.
 const secureStorage = chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 const uiUrl = chrome.runtime.getURL('app.html');
+const popupUrl = chrome.runtime.getURL('popup.html');
 let pumping = false;
 // Still strictly one request chain at a time; a small batch per wake-up shortens long video batches.
 const JOBS_PER_PUMP = 3;
@@ -100,10 +101,7 @@ chrome.runtime.onStartup.addListener(() => { void initialize(); });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === 'maintenance') void Promise.allSettled([pump(), badge(), backupIfDue(), pruneCooldowns()]);
 });
-chrome.action.onClicked.addListener(tab => {
-  if (tab.id) void chrome.tabs.sendMessage(tab.id, { type: 'capture-video' }).then(reply => { if (!reply?.handled) void chrome.tabs.create({ url: uiUrl }); }, () => chrome.tabs.create({ url: uiUrl }));
-  else void chrome.tabs.create({ url: uiUrl });
-});
+// The toolbar icon opens popup.html (30-second review, plus "save this YouTube sentence" on YouTube tabs).
 chrome.commands.onCommand.addListener((command, tab) => {
   if (command === 'review') void chrome.tabs.create({ url: `${uiUrl}#review` });
   if (command === 'capture-video' && tab?.id) void chrome.tabs.sendMessage(tab.id, { type: 'capture-video' }).catch(() => undefined);
@@ -111,7 +109,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 chrome.runtime.onMessage.addListener((raw: unknown, sender, respond: (reply: Reply<unknown>) => void) => {
   if (typeof raw !== 'object' || raw === null || 'target' in raw) return false;
-  const trustedUI = sender.id === chrome.runtime.id && !!sender.url?.startsWith(uiUrl);
+  const trustedUI = sender.id === chrome.runtime.id && (!!sender.url?.startsWith(uiUrl) || !!sender.url?.startsWith(popupUrl));
   const content = sender.id === chrome.runtime.id && sender.tab?.id !== undefined;
   if (!trustedUI && !content) { respond({ ok: false, error: 'Nguồn yêu cầu không hợp lệ.' }); return false; }
   void (async (): Promise<unknown> => {
